@@ -4,37 +4,37 @@
 #include <time.h>
 #include <Arduino.h>
 
-class DS1302 {
+namespace __rtclib_details {
   template <typename T>
-  class GenericRAMRef {
+  class RAMRef {
     T *_thisPtr;
     uint8_t _index;
 
   public:
-    GenericRAMRef(T *thisPtr, uint8_t index) : _thisPtr(thisPtr), _index(index) {}
+    RAMRef(T *thisPtr, uint8_t index) : _thisPtr(thisPtr), _index(index) {}
 
     operator uint8_t() const { return _thisPtr->readRAM(_index); }
 
-    GenericRAMRef &operator=(const GenericRAMRef &ref) { return *this = *ref; }
-    GenericRAMRef &operator=(uint8_t val) {
+    RAMRef &operator=(const RAMRef &ref) { return *this = *ref; }
+    RAMRef &operator=(uint8_t val) {
       _thisPtr->writeRAM(_index, val);
       return *this;
     }
-    GenericRAMRef &operator+=(uint8_t in) { return *this = *this + in; }
-    GenericRAMRef &operator-=(uint8_t in) { return *this = *this - in; }
-    GenericRAMRef &operator*=(uint8_t in) { return *this = *this * in; }
-    GenericRAMRef &operator/=(uint8_t in) { return *this = *this / in; }
-    GenericRAMRef &operator^=(uint8_t in) { return *this = *this ^ in; }
-    GenericRAMRef &operator%=(uint8_t in) { return *this = *this % in; }
-    GenericRAMRef &operator&=(uint8_t in) { return *this = *this & in; }
-    GenericRAMRef &operator|=(uint8_t in) { return *this = *this | in; }
-    GenericRAMRef &operator<<=(uint8_t in) { return *this = *this << in; }
-    GenericRAMRef &operator>>=(uint8_t in) { return *this = *this >> in; }
+    RAMRef &operator+=(uint8_t in) { return *this = *this + in; }
+    RAMRef &operator-=(uint8_t in) { return *this = *this - in; }
+    RAMRef &operator*=(uint8_t in) { return *this = *this * in; }
+    RAMRef &operator/=(uint8_t in) { return *this = *this / in; }
+    RAMRef &operator^=(uint8_t in) { return *this = *this ^ in; }
+    RAMRef &operator%=(uint8_t in) { return *this = *this % in; }
+    RAMRef &operator&=(uint8_t in) { return *this = *this & in; }
+    RAMRef &operator|=(uint8_t in) { return *this = *this | in; }
+    RAMRef &operator<<=(uint8_t in) { return *this = *this << in; }
+    RAMRef &operator>>=(uint8_t in) { return *this = *this >> in; }
 
     // Prefix increment
-    GenericRAMRef &operator++() { return *this += 1; }
+    RAMRef &operator++() { return *this += 1; }
     // Prefix decrement
-    GenericRAMRef &operator--() { return *this -= 1; }
+    RAMRef &operator--() { return *this -= 1; }
 
     // Postfix increment
     uint8_t operator++(int) {
@@ -52,33 +52,36 @@ class DS1302 {
   };
 
   template <typename T>
-  class GenericRAMPtr {
+  class RAMPtr {
     T *_thisPtr;
     uint8_t _index;
 
   public:
-    GenericRAMPtr(T *thisPtr, uint8_t index) : _thisPtr(thisPtr), _index(index) {}
+    RAMPtr(T *thisPtr, uint8_t index) : _thisPtr(thisPtr), _index(index) {}
 
     operator uint8_t() const { return _index; }
-    GenericRAMPtr &operator=(uint8_t index) {
+    RAMPtr &operator=(uint8_t index) {
       _index = index;
       return *this;
     }
 
-    GenericRAMRef<T> operator*() { return GenericRAMRef<T>(_thisPtr, _index); }
+    RAMRef<T> operator*() { return RAMRef<T>(_thisPtr, _index); }
 
-    GenericRAMPtr operator++(int) { return GenericRAMPtr(_thisPtr, _index++); }
-    GenericRAMPtr operator--(int) { return GenericRAMPtr(_thisPtr, _index--); }
-    GenericRAMPtr &operator++() {
+    RAMPtr operator++(int) { return RAMPtr(_thisPtr, _index++); }
+    RAMPtr operator--(int) { return RAMPtr(_thisPtr, _index--); }
+    RAMPtr &operator++() {
       ++_index;
       return *this;
     }
-    GenericRAMPtr &operator--() {
+    RAMPtr &operator--() {
       --_index;
       return *this;
     }
   };
 
+}; // namespace __rtclib_details
+
+class DS1302 {
   // RAII class for data transferring
   class TransferHelper {
     uint8_t _ce, _sck;
@@ -99,8 +102,8 @@ class DS1302 {
     }
   };
 
-  using RAMRef = GenericRAMRef<DS1302>;
-  using RAMPtr = GenericRAMPtr<DS1302>;
+  using RAMRef = __rtclib_details::RAMRef<DS1302>;
+  using RAMPtr = __rtclib_details::RAMPtr<DS1302>;
 
   uint8_t _ce;
   uint8_t _sck;
@@ -109,9 +112,6 @@ class DS1302 {
   uint8_t read();
   void write(uint8_t val);
 
-  uint8_t readRAM(uint8_t index);
-  void writeRAM(uint8_t index, uint8_t val);
-
 public:
   static constexpr uint8_t RAM_SIZE = 31;
 
@@ -119,6 +119,9 @@ public:
 
   uint8_t readReg(uint8_t addr);
   void writeReg(uint8_t addr, uint8_t val);
+
+  uint8_t readRAM(uint8_t index);
+  void writeRAM(uint8_t index, uint8_t val);
 
   void getTime(tm *timeptr);
   void setTime(const tm *timeptr);
