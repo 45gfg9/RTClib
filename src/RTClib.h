@@ -108,8 +108,8 @@ class DS1302 {
   uint8_t _sck;
   uint8_t _io;
 
-  uint8_t read();
-  void write(uint8_t val);
+  uint8_t _read();
+  void _write(uint8_t val);
 
 public:
   enum trickle_charger_t : uint8_t {

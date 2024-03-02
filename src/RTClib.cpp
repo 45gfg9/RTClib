@@ -50,7 +50,7 @@ bool DS1302::setup() {
   return true;
 }
 
-uint8_t DS1302::read() {
+uint8_t DS1302::_read() {
   // FIXME: this works while shiftIn() doesn't
   pinMode(_io, INPUT);
   uint8_t value = 0;
@@ -63,7 +63,7 @@ uint8_t DS1302::read() {
   return value;
 }
 
-void DS1302::write(uint8_t val) {
+void DS1302::_write(uint8_t val) {
   pinMode(_io, OUTPUT);
   shiftOut(_io, _sck, LSBFIRST, val);
 }
@@ -71,28 +71,28 @@ void DS1302::write(uint8_t val) {
 uint8_t DS1302::readReg(uint8_t addr) {
   TransferHelper _tr(_ce, _sck);
 
-  write(addr);
-  return read();
+  _write(addr);
+  return _read();
 }
 
 void DS1302::writeReg(uint8_t addr, uint8_t val) {
   TransferHelper _tr(_ce, _sck);
 
-  write(addr);
-  write(val);
+  _write(addr);
+  _write(val);
 }
 
 void DS1302::getTime(tm *timeptr) {
   TransferHelper _tr(_ce, _sck);
 
-  write(DS1302_R_CLKBURST);
-  timeptr->tm_sec = bcd2bin(read() & 0x7f);
-  timeptr->tm_min = bcd2bin(read());
-  timeptr->tm_hour = bcd2bin(read());
-  timeptr->tm_mday = bcd2bin(read());
-  timeptr->tm_mon = bcd2bin(read()) - 1;
-  timeptr->tm_wday = read();
-  timeptr->tm_year = bcd2bin(read()) + 100;
+  _write(DS1302_R_CLKBURST);
+  timeptr->tm_sec = bcd2bin(_read() & 0x7f);
+  timeptr->tm_min = bcd2bin(_read());
+  timeptr->tm_hour = bcd2bin(_read());
+  timeptr->tm_mday = bcd2bin(_read());
+  timeptr->tm_mon = bcd2bin(_read()) - 1;
+  timeptr->tm_wday = _read();
+  timeptr->tm_year = bcd2bin(_read()) + 100;
 
   if (timeptr->tm_wday == 7) {
     // Sunday
@@ -109,15 +109,15 @@ void DS1302::setTime(const tm *timeptr) {
     wday = 7;
   }
 
-  write(DS1302_W_CLKBURST);
-  write(bin2bcd(timeptr->tm_sec));
-  write(bin2bcd(timeptr->tm_min));
-  write(bin2bcd(timeptr->tm_hour));
-  write(bin2bcd(timeptr->tm_mday));
-  write(bin2bcd(timeptr->tm_mon + 1));
-  write(wday);
-  write(bin2bcd(timeptr->tm_year - 100));
-  write(0);
+  _write(DS1302_W_CLKBURST);
+  _write(bin2bcd(timeptr->tm_sec));
+  _write(bin2bcd(timeptr->tm_min));
+  _write(bin2bcd(timeptr->tm_hour));
+  _write(bin2bcd(timeptr->tm_mday));
+  _write(bin2bcd(timeptr->tm_mon + 1));
+  _write(wday);
+  _write(bin2bcd(timeptr->tm_year - 100));
+  _write(0);
 }
 
 bool DS1302::isRunning() {
@@ -152,8 +152,8 @@ uint8_t DS1302::readRAM(uint8_t index) {
 
   TransferHelper _tr(_ce, _sck);
 
-  write(DS1302_R_RAM + (index << 1));
-  return read();
+  _write(DS1302_R_RAM + (index << 1));
+  return _read();
 }
 
 void DS1302::writeRAM(uint8_t index, uint8_t val) {
@@ -163,6 +163,6 @@ void DS1302::writeRAM(uint8_t index, uint8_t val) {
 
   TransferHelper _tr(_ce, _sck);
 
-  write(DS1302_W_RAM + (index << 1));
-  write(val);
+  _write(DS1302_W_RAM + (index << 1));
+  _write(val);
 }
