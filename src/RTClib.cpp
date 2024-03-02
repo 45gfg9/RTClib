@@ -27,7 +27,19 @@ namespace __rtclib_details {
     DS1302_W_RAMBURST = 0xfe,
     DS1302_R_RAMBURST = 0xff,
   };
-}
+
+  enum DS1307RegAddr : uint8_t {
+    DS1307_SEC = 0x00,
+    DS1307_MIN = 0x01,
+    DS1307_HR = 0x02,
+    DS1307_DOW = 0x03,
+    DS1307_DATE = 0x04,
+    DS1307_MON = 0x05,
+    DS1307_YEAR = 0x06,
+    DS1307_CTRL = 0x07,
+    DS1307_RAM = 0x08,
+  };
+} // namespace __rtclib_details
 
 using namespace __rtclib_details;
 
@@ -37,6 +49,22 @@ static constexpr uint8_t bcd2bin(uint8_t val) {
 
 static constexpr uint8_t bin2bcd(uint8_t val) {
   return val + 6 * (val / 10);
+}
+
+static void i2c_rtc_write(TwoWire &wire, uint8_t dev, uint8_t addr, uint8_t val) {
+  wire.beginTransmission(dev);
+  wire.write(addr);
+  wire.write(val);
+  wire.endTransmission();
+}
+
+static uint8_t i2c_rtc_read(TwoWire &wire, uint8_t dev, uint8_t addr) {
+  wire.beginTransmission(dev);
+  wire.write(addr);
+  wire.endTransmission();
+
+  wire.requestFrom(dev, uint8_t(1));
+  return wire.read();
 }
 
 DS1302::DS1302(uint8_t ce, uint8_t sck, uint8_t io) : _ce(ce), _sck(sck), _io(io) {}
@@ -166,4 +194,101 @@ void DS1302::writeRAM(uint8_t index, uint8_t val) {
 
   _write(DS1302_W_RAM + (index << 1));
   _write(val);
+}
+
+DS1307::DS1307(TwoWire &wire) : _wire(wire) {}
+
+bool DS1307::setup() {
+  _wire.beginTransmission(ADDRESS);
+  return _wire.endTransmission() == 0;
+}
+
+uint8_t DS1307::readReg(uint8_t addr) {
+  return i2c_rtc_read(_wire, ADDRESS, addr);
+}
+
+void DS1307::writeReg(uint8_t addr, uint8_t val) {
+  i2c_rtc_write(_wire, ADDRESS, addr, val);
+}
+
+uint8_t DS1307::readRAM(uint8_t index) {
+  if (index >= RAM_SIZE) {
+    return 0;
+  }
+
+  return i2c_rtc_read(_wire, ADDRESS, DS1307_RAM + index);
+}
+
+void DS1307::writeRAM(uint8_t index, uint8_t val) {
+  if (index >= RAM_SIZE) {
+    return;
+  }
+
+  i2c_rtc_write(_wire, ADDRESS, DS1307_RAM + index, val);
+}
+
+void DS1307::getTime(tm *timeptr) {
+  _wire.beginTransmission(ADDRESS);
+  _wire.write(DS1307_SEC);
+  _wire.endTransmission();
+
+  _wire.requestFrom(ADDRESS, uint8_t(7));
+  timeptr->tm_sec = bcd2bin(_wire.read() & 0x7f);
+  timeptr->tm_min = bcd2bin(_wire.read());
+  timeptr->tm_hour = bcd2bin(_wire.read());
+  timeptr->tm_wday = _wire.read();
+  timeptr->tm_mday = bcd2bin(_wire.read());
+  timeptr->tm_mon = bcd2bin(_wire.read()) - 1;
+  timeptr->tm_year = bcd2bin(_wire.read()) + 100;
+
+  if (timeptr->tm_wday == 7) {
+    // Sunday
+    timeptr->tm_wday = 0;
+  }
+}
+
+void DS1307::setTime(const tm *timeptr) {
+  uint8_t wday = timeptr->tm_wday;
+  if (wday == 0) {
+    // Sunday
+    wday = 7;
+  }
+
+  _wire.beginTransmission(ADDRESS);
+  _wire.write(DS1307_SEC);
+  _wire.write(bin2bcd(timeptr->tm_sec));
+  _wire.write(bin2bcd(timeptr->tm_min));
+  _wire.write(bin2bcd(timeptr->tm_hour));
+  _wire.write(wday);
+  _wire.write(bin2bcd(timeptr->tm_mday));
+  _wire.write(bin2bcd(timeptr->tm_mon + 1));
+  _wire.write(bin2bcd(timeptr->tm_year - 100));
+  _wire.endTransmission();
+}
+
+bool DS1307::isRunning() {
+  return !(readReg(DS1307_SEC) & 0x80);
+}
+
+void DS1307::setRunning(bool running) {
+  uint8_t sec = readReg(DS1307_SEC);
+  uint8_t ch = running ? 0 : 0x80;
+  if ((sec & 0x80) != ch) {
+    writeReg(DS1307_SEC, (sec & 0x7f) | ch);
+  }
+}
+
+DS1307::sqw_out_t DS1307::getSQWOut() {
+  uint8_t r = readReg(DS1307_CTRL);
+
+  if ((r & 0x10) == 0x10) {
+    // SQWE set
+    return static_cast<sqw_out_t>(r & 0x7f);
+  }
+
+  return static_cast<sqw_out_t>(r & 0xfc);
+}
+
+void DS1307::setSQWOut(sqw_out_t value) {
+  writeReg(DS1307_CTRL, value);
 }

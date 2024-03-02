@@ -3,6 +3,7 @@
 
 #include <time.h>
 #include <Arduino.h>
+#include <Wire.h>
 
 namespace __rtclib_details {
   template <typename T>
@@ -142,6 +143,49 @@ public:
 
   trickle_charger_t getTrickleCharger();
   void setTrickleCharger(trickle_charger_t value);
+
+  RAMPtr begin() { return RAMPtr(this, 0); }
+  RAMPtr end() { return RAMPtr(this, RAM_SIZE); }
+  RAMRef operator[](int index) { return RAMRef(this, index); }
+};
+
+class DS1307 {
+  using RAMRef = __rtclib_details::RAMRef<DS1307>;
+  using RAMPtr = __rtclib_details::RAMPtr<DS1307>;
+
+  TwoWire &_wire;
+
+public:
+  enum sqw_out_t : uint8_t {
+    SO_LOW = 0x00,
+    SO_1HZ = 0x10,
+    SO_4KHZ = 0x11,
+    SO_8KHZ = 0x12,
+    SO_32KHZ = 0x13,
+    SO_HIGH = 0x80,
+  };
+
+  static constexpr uint8_t ADDRESS = 0x68;
+  static constexpr uint8_t RAM_SIZE = 56;
+
+  DS1307(TwoWire &wire = Wire);
+
+  bool setup();
+
+  uint8_t readReg(uint8_t addr);
+  void writeReg(uint8_t addr, uint8_t val);
+
+  uint8_t readRAM(uint8_t index);
+  void writeRAM(uint8_t index, uint8_t val);
+
+  void getTime(tm *timeptr);
+  void setTime(const tm *timeptr);
+
+  bool isRunning();
+  void setRunning(bool running);
+
+  sqw_out_t getSQWOut();
+  void setSQWOut(sqw_out_t value);
 
   RAMPtr begin() { return RAMPtr(this, 0); }
   RAMPtr end() { return RAMPtr(this, RAM_SIZE); }
