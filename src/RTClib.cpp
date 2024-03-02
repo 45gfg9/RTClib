@@ -121,13 +121,14 @@ void DS1302::setTime(const tm *timeptr) {
 }
 
 bool DS1302::isRunning() {
-  return readReg(DS1302_R_SEC) & 0x80;
+  return !(readReg(DS1302_R_SEC) & 0x80);
 }
 
 void DS1302::setRunning(bool running) {
   uint8_t sec = readReg(DS1302_R_SEC);
-  if ((sec & 0x80) != (running << 7)) {
-    writeReg(DS1302_W_SEC, (sec & 0x7f) | (running << 7));
+  uint8_t ch = running ? 0 : 0x80;
+  if ((sec & 0x80) != ch) {
+    writeReg(DS1302_W_SEC, (sec & 0x7f) | ch);
   }
 }
 
@@ -135,7 +136,7 @@ DS1302::trickle_charger_t DS1302::getTrickleCharger() {
   uint8_t r = readReg(DS1302_R_TC);
 
   // we need this because the register value might not always be valid
-  if ((r >> 4) == 0b1010 && (r >> 2) & 0b11 != 0 && (r & 0b11) != 0b11) {
+  if ((r & 0xf0) == 0xa0 && (r & 0x0c) != 0 && (r & 0x03) != 0x03) {
     return static_cast<trickle_charger_t>(r);
   }
   return TC_OFF;
@@ -147,7 +148,7 @@ void DS1302::setTrickleCharger(trickle_charger_t mode) {
 
 uint8_t DS1302::readRAM(uint8_t index) {
   if (index >= RAM_SIZE) {
-    return 0xff;
+    return 0;
   }
 
   TransferHelper _tr(_ce, _sck);
