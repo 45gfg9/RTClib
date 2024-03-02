@@ -122,6 +122,20 @@ void DS1302::setRunning(bool running) {
   }
 }
 
+DS1302::trickle_charger_t DS1302::getTrickleCharger() {
+  uint8_t r = readReg(DS1302_R_TC);
+
+  // we need this because the register value might not always be valid
+  if ((r >> 4) == 0b1010 && (r >> 2) & 0b11 != 0 && (r & 0b11) != 0b11) {
+    return static_cast<trickle_charger_t>(r);
+  }
+  return TC_OFF;
+}
+
+void DS1302::setTrickleCharger(trickle_charger_t mode) {
+  writeReg(DS1302_W_TC, mode);
+}
+
 uint8_t DS1302::readRAM(uint8_t index) {
   if (index >= RAM_SIZE) {
     return 0xff;

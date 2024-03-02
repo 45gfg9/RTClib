@@ -78,7 +78,6 @@ namespace __rtclib_details {
       return *this;
     }
   };
-
 }; // namespace __rtclib_details
 
 class DS1302 {
@@ -113,6 +112,16 @@ class DS1302 {
   void write(uint8_t val);
 
 public:
+  enum trickle_charger_t : uint8_t {
+    TC_OFF = 0x5c,
+    TC_1D2K = 0xa5,
+    TC_1D4K = 0xa6,
+    TC_1D8K = 0xa7,
+    TC_2D2K = 0xa9,
+    TC_2D4K = 0xaa,
+    TC_2D8K = 0xab,
+  };
+
   static constexpr uint8_t RAM_SIZE = 31;
 
   void begin(uint8_t ce, uint8_t sck, uint8_t io);
@@ -128,6 +137,9 @@ public:
 
   bool isRunning();
   void setRunning(bool running);
+
+  trickle_charger_t getTrickleCharger();
+  void setTrickleCharger(trickle_charger_t value);
 
   RAMPtr begin() { return RAMPtr(this, 0); }
   RAMPtr end() { return RAMPtr(this, RAM_SIZE); }
