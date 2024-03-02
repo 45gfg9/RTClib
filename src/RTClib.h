@@ -124,7 +124,9 @@ public:
 
   static constexpr uint8_t RAM_SIZE = 31;
 
-  void begin(uint8_t ce, uint8_t sck, uint8_t io);
+  DS1302(uint8_t ce, uint8_t sck, uint8_t io);
+
+  bool setup();
 
   uint8_t readReg(uint8_t addr);
   void writeReg(uint8_t addr, uint8_t val);

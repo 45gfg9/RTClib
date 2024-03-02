@@ -1,31 +1,35 @@
 #include "RTClib.h"
 
-enum DS1302RegAddr : uint8_t {
-  DS1302_W_SEC = 0x80,
-  DS1302_R_SEC = 0x81,
-  DS1302_W_MIN = 0x82,
-  DS1302_R_MIN = 0x83,
-  DS1302_W_HR = 0x84,
-  DS1302_R_HR = 0x85,
-  DS1302_W_DATE = 0x86,
-  DS1302_R_DATE = 0x87,
-  DS1302_W_MON = 0x88,
-  DS1302_R_MON = 0x89,
-  DS1302_W_DOW = 0x8a,
-  DS1302_R_DOW = 0x8b,
-  DS1302_W_YEAR = 0x8c,
-  DS1302_R_YEAR = 0x8d,
-  DS1302_W_WP = 0x8e,
-  DS1302_R_WP = 0x8f,
-  DS1302_W_TC = 0x90,
-  DS1302_R_TC = 0x91,
-  DS1302_W_CLKBURST = 0xbe,
-  DS1302_R_CLKBURST = 0xbf,
-  DS1302_W_RAM = 0xc0,
-  DS1302_R_RAM = 0xc1,
-  DS1302_W_RAMBURST = 0xfe,
-  DS1302_R_RAMBURST = 0xff,
-};
+namespace __rtclib_details {
+  enum DS1302RegAddr : uint8_t {
+    DS1302_W_SEC = 0x80,
+    DS1302_R_SEC = 0x81,
+    DS1302_W_MIN = 0x82,
+    DS1302_R_MIN = 0x83,
+    DS1302_W_HR = 0x84,
+    DS1302_R_HR = 0x85,
+    DS1302_W_DATE = 0x86,
+    DS1302_R_DATE = 0x87,
+    DS1302_W_MON = 0x88,
+    DS1302_R_MON = 0x89,
+    DS1302_W_DOW = 0x8a,
+    DS1302_R_DOW = 0x8b,
+    DS1302_W_YEAR = 0x8c,
+    DS1302_R_YEAR = 0x8d,
+    DS1302_W_WP = 0x8e,
+    DS1302_R_WP = 0x8f,
+    DS1302_W_TC = 0x90,
+    DS1302_R_TC = 0x91,
+    DS1302_W_CLKBURST = 0xbe,
+    DS1302_R_CLKBURST = 0xbf,
+    DS1302_W_RAM = 0xc0,
+    DS1302_R_RAM = 0xc1,
+    DS1302_W_RAMBURST = 0xfe,
+    DS1302_R_RAMBURST = 0xff,
+  };
+}
+
+using namespace __rtclib_details;
 
 static constexpr uint8_t bcd2bin(uint8_t val) {
   return val - 6 * (val >> 4);
@@ -35,16 +39,20 @@ static constexpr uint8_t bin2bcd(uint8_t val) {
   return val + 6 * (val / 10);
 }
 
-void DS1302::begin(uint8_t ce, uint8_t sck, uint8_t io) {
-  pinMode((_ce = ce), OUTPUT);
-  pinMode((_sck = sck), OUTPUT);
-  pinMode((_io = io), INPUT);
+DS1302::DS1302(uint8_t ce, uint8_t sck, uint8_t io) : _ce(ce), _sck(sck), _io(io) {}
+
+bool DS1302::setup() {
+  pinMode(_ce, OUTPUT);
+  pinMode(_sck, OUTPUT);
   writeReg(DS1302_W_WP, 0);
   setRunning(true);
+
+  return true;
 }
 
 uint8_t DS1302::read() {
   // FIXME: this works while shiftIn() doesn't
+  pinMode(_io, INPUT);
   uint8_t value = 0;
   for (uint8_t i = 0; i < 8; ++i) {
     uint8_t bit = digitalRead(_io);
@@ -56,6 +64,7 @@ uint8_t DS1302::read() {
 }
 
 void DS1302::write(uint8_t val) {
+  pinMode(_io, OUTPUT);
   shiftOut(_io, _sck, LSBFIRST, val);
 }
 
