@@ -192,4 +192,73 @@ public:
   RAMRef operator[](int index) { return RAMRef(this, index); }
 };
 
+class DS3231 {
+  TwoWire &_wire;
+
+public:
+  enum sqw_t : uint8_t {
+    SQW_1HZ = 0x0,
+    SQW_1024HZ = 0x08,
+    SQW_4096HZ = 0x10,
+    SQW_8192HZ = 0x18,
+  };
+
+  enum alarm_1_rate : uint8_t {
+    AL1_EVERY_SECOND = 0x0f,
+    AL1_MATCH_SECONDS = 0x0e,
+    AL1_MATCH_MINUTES = 0x0c,
+    AL1_MATCH_HOURS = 0x08,
+    AL1_MATCH_DATE = 0x00,
+    AL1_MATCH_DAY = 0x10,
+    AL1_INVALID = 0xff,
+  };
+
+  enum alarm_2_rate : uint8_t {
+    AL2_EVERY_MINUTE = 0x07,
+    AL2_MATCH_MINUTES = 0x06,
+    AL2_MATCH_HOURS = 0x04,
+    AL2_MATCH_DATE = 0x00,
+    AL2_MATCH_DAY = 0x08,
+    AL2_INVALID = 0xff,
+  };
+
+  static constexpr uint8_t ADDRESS = 0x68;
+
+  DS3231(TwoWire &wire = Wire);
+
+  bool setup();
+
+  uint8_t readReg(uint8_t addr);
+  void writeReg(uint8_t addr, uint8_t val);
+
+  void getTime(tm *timeptr);
+  void setTime(const tm *timeptr);
+
+  bool isRunning();
+  void setRunning(bool running);
+
+  sqw_t getSQWFreq();
+  void setSQWFreq(sqw_t freq);
+
+  bool isInterruptEnabled();
+  void setInterruptEnabled(bool enabled);
+
+  bool isAlarm1InterruptEnabled();
+  void setAlarm1InterruptEnabled(bool enabled);
+
+  bool isAlarm2InterruptEnabled();
+  void setAlarm2InterruptEnabled(bool enabled);
+
+  alarm_1_rate getAlarm1(tm *timeptr);
+  void setAlarm1(alarm_1_rate rate, const tm *timeptr);
+
+  alarm_2_rate getAlarm2(tm *timeptr);
+  void setAlarm2(alarm_2_rate rate, const tm *timeptr);
+
+  int8_t getAgingOffset();
+  void setAgingOffset(int8_t offset);
+
+  float getTemperature();
+};
+
 #endif

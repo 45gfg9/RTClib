@@ -39,6 +39,28 @@ namespace __rtclib_details {
     DS1307_CTRL = 0x07,
     DS1307_RAM = 0x08,
   };
+
+  enum DS3231RegAddr : uint8_t {
+    DS3231_SEC = 0x00,
+    DS3231_MIN = 0x01,
+    DS3231_HR = 0x02,
+    DS3231_DOW = 0x03,
+    DS3231_DATE = 0x04,
+    DS3231_MON = 0x05,
+    DS3231_YEAR = 0x06,
+    DS3231_AL1_SEC = 0x07,
+    DS3231_AL1_MIN = 0x08,
+    DS3231_AL1_HR = 0x09,
+    DS3231_AL1_DATE = 0x0a,
+    DS3231_AL2_MIN = 0x0b,
+    DS3231_AL2_HR = 0x0c,
+    DS3231_AL2_DATE = 0x0d,
+    DS3231_CTRL = 0x0e,
+    DS3231_STATUS = 0x0f,
+    DS3231_AGING = 0x10,
+    DS3231_TEMP_MSB = 0x11,
+    DS3231_TEMP_LSB = 0x12,
+  };
 } // namespace __rtclib_details
 
 using namespace __rtclib_details;
@@ -297,4 +319,310 @@ DS1307::sqw_out_t DS1307::getSQWOut() {
 
 void DS1307::setSQWOut(sqw_out_t value) {
   writeReg(DS1307_CTRL, value);
+}
+
+DS3231::DS3231(TwoWire &wire) : _wire(wire) {}
+
+bool DS3231::setup() {
+  _wire.beginTransmission(ADDRESS);
+  return _wire.endTransmission() == 0;
+}
+
+uint8_t DS3231::readReg(uint8_t addr) {
+  return i2c_rtc_read(_wire, ADDRESS, addr);
+}
+
+void DS3231::writeReg(uint8_t addr, uint8_t val) {
+  i2c_rtc_write(_wire, ADDRESS, addr, val);
+}
+
+void DS3231::getTime(tm *timeptr) {
+  _wire.beginTransmission(ADDRESS);
+  _wire.write(DS3231_SEC);
+  _wire.endTransmission();
+
+  _wire.requestFrom(ADDRESS, uint8_t(7));
+  timeptr->tm_sec = bcd2bin(_wire.read() & 0x7f);
+  timeptr->tm_min = bcd2bin(_wire.read());
+  timeptr->tm_hour = bcd2bin(_wire.read());
+  timeptr->tm_wday = _wire.read();
+  timeptr->tm_mday = bcd2bin(_wire.read());
+  uint8_t cen_mon = _wire.read();
+  timeptr->tm_mon = bcd2bin(cen_mon & 0x1f) - 1;
+  timeptr->tm_year = bcd2bin(_wire.read()) + 100;
+
+  if (cen_mon & 0x80) {
+    // century bit set
+    timeptr->tm_year += 100;
+  }
+
+  if (timeptr->tm_wday == 7) {
+    // Sunday
+    timeptr->tm_wday = 0;
+  }
+}
+
+void DS3231::setTime(const tm *timeptr) {
+  uint8_t wday = timeptr->tm_wday;
+  if (wday == 0) {
+    // Sunday
+    wday = 7;
+  }
+
+  uint8_t year = timeptr->tm_year - 100;
+  uint8_t cen_mon = bin2bcd(timeptr->tm_mon + 1);
+
+  if (year >= 100) {
+    cen_mon |= 0x80;
+    year -= 100;
+  }
+
+  _wire.beginTransmission(ADDRESS);
+  _wire.write(DS3231_SEC);
+  _wire.write(bin2bcd(timeptr->tm_sec));
+  _wire.write(bin2bcd(timeptr->tm_min));
+  _wire.write(bin2bcd(timeptr->tm_hour));
+  _wire.write(wday);
+  _wire.write(bin2bcd(timeptr->tm_mday));
+  _wire.write(cen_mon);
+  _wire.write(bin2bcd(year));
+  _wire.endTransmission();
+}
+
+bool DS3231::isRunning() {
+  return (readReg(DS3231_CTRL) & 0x80) == 0;
+}
+
+void DS3231::setRunning(bool running) {
+  MASK_BOOL_REG_BITS(DS3231_SEC, 0x80, !running);
+}
+
+DS3231::sqw_t DS3231::getSQWFreq() {
+  return static_cast<sqw_t>(readReg(DS3231_CTRL) & 0x18);
+}
+
+void DS3231::setSQWFreq(sqw_t freq) {
+  uint8_t ctrl = readReg(DS3231_CTRL);
+  writeReg(DS3231_CTRL, (ctrl & 0xe7) | freq);
+}
+
+bool DS3231::isInterruptEnabled() {
+  return (readReg(DS3231_CTRL) & 0x04) != 0;
+}
+
+void DS3231::setInterruptEnabled(bool enabled) {
+  MASK_BOOL_REG_BITS(DS3231_CTRL, 0x04, enabled);
+}
+
+bool DS3231::isAlarm1InterruptEnabled() {
+  return (readReg(DS3231_CTRL) & 0x01) != 0;
+}
+
+void DS3231::setAlarm1InterruptEnabled(bool enabled) {
+  MASK_BOOL_REG_BITS(DS3231_CTRL, 0x01, enabled);
+}
+
+bool DS3231::isAlarm2InterruptEnabled() {
+  return (readReg(DS3231_CTRL) & 0x02) != 0;
+}
+
+void DS3231::setAlarm2InterruptEnabled(bool enabled) {
+  MASK_BOOL_REG_BITS(DS3231_CTRL, 0x02, enabled);
+}
+
+DS3231::alarm_1_rate DS3231::getAlarm1(tm *timeptr) {
+  _wire.beginTransmission(ADDRESS);
+  _wire.write(DS3231_AL1_SEC);
+  _wire.endTransmission();
+
+  _wire.requestFrom(ADDRESS, uint8_t(4));
+  uint8_t sec = _wire.read();
+  uint8_t min = _wire.read();
+  uint8_t hr = _wire.read();
+  uint8_t date = _wire.read();
+
+  timeptr->tm_sec = bcd2bin(sec & 0x7f);
+  timeptr->tm_min = bcd2bin(min & 0x7f);
+  timeptr->tm_hour = bcd2bin(hr & 0x3f);
+
+  bool dy_dt = date & 0x40;
+
+  if (dy_dt) {
+    // DY/#DT bit set, match day of week
+    timeptr->tm_wday = date & 0x07;
+    if (timeptr->tm_wday == 7) {
+      // Sunday
+      timeptr->tm_wday = 0;
+    }
+    timeptr->tm_mday = 0;
+  } else {
+    // DY/#DT bit clear, match date
+    timeptr->tm_mday = bcd2bin(date & 0x3f);
+    timeptr->tm_wday = 0;
+  }
+
+  bool a1m4 = date & 0x80;
+  bool a1m3 = hr & 0x80;
+  bool a1m2 = min & 0x80;
+  bool a1m1 = sec & 0x80;
+
+  if (a1m4 && a1m3 && a1m2 && a1m1) {
+    return AL1_EVERY_SECOND;
+  } else if (a1m4 && a1m3 && a1m2 && !a1m1) {
+    return AL1_MATCH_SECONDS;
+  } else if (a1m4 && a1m3 && !a1m2 && !a1m1) {
+    return AL1_MATCH_MINUTES;
+  } else if (a1m4 && !a1m3 && !a1m2 && !a1m1) {
+    return AL1_MATCH_HOURS;
+  } else if (!a1m4 && !a1m3 && !a1m2 && !a1m1 && !dy_dt) {
+    return AL1_MATCH_DATE;
+  } else if (!a1m4 && !a1m3 && !a1m2 && !a1m1 && dy_dt) {
+    return AL1_MATCH_DAY;
+  } else {
+    return AL1_INVALID;
+  }
+}
+
+void DS3231::setAlarm1(alarm_1_rate rate, const tm *timeptr) {
+  uint8_t sec = bin2bcd(timeptr->tm_sec);
+  uint8_t min = bin2bcd(timeptr->tm_min);
+  uint8_t hr = bin2bcd(timeptr->tm_hour);
+  uint8_t date = bin2bcd(timeptr->tm_mday);
+  uint8_t wday = timeptr->tm_wday;
+  if (wday == 0) {
+    // Sunday
+    wday = 7;
+  }
+
+  switch (rate) {
+    case AL1_EVERY_SECOND:
+      sec |= 0x80;
+      [[fallthrough]];
+    case AL1_MATCH_SECONDS:
+      min |= 0x80;
+      [[fallthrough]];
+    case AL1_MATCH_MINUTES:
+      hr |= 0x80;
+      [[fallthrough]];
+    case AL1_MATCH_HOURS:
+      date |= 0x80;
+      [[fallthrough]];
+    default:
+      break;
+    case AL1_MATCH_DAY:
+      date |= 0x40;
+      break;
+  }
+
+  _wire.beginTransmission(ADDRESS);
+  _wire.write(DS3231_AL1_SEC);
+  _wire.write(sec);
+  _wire.write(min);
+  _wire.write(hr);
+  _wire.write(date);
+  _wire.endTransmission();
+}
+
+DS3231::alarm_2_rate DS3231::getAlarm2(tm *timeptr) {
+  _wire.beginTransmission(ADDRESS);
+  _wire.write(DS3231_AL2_MIN);
+  _wire.endTransmission();
+
+  _wire.requestFrom(ADDRESS, uint8_t(3));
+  uint8_t min = _wire.read();
+  uint8_t hr = _wire.read();
+  uint8_t date = _wire.read();
+
+  timeptr->tm_min = bcd2bin(min & 0x7f);
+  timeptr->tm_hour = bcd2bin(hr & 0x3f);
+
+  bool dy_dt = date & 0x40;
+
+  if (dy_dt) {
+    // DY/#DT bit set, match day of week
+    timeptr->tm_wday = date & 0x07;
+    if (timeptr->tm_wday == 7) {
+      // Sunday
+      timeptr->tm_wday = 0;
+    }
+    timeptr->tm_mday = 0;
+  } else {
+    // DY/#DT bit clear, match date
+    timeptr->tm_mday = bcd2bin(date & 0x3f);
+    timeptr->tm_wday = 0;
+  }
+
+  bool a2m4 = date & 0x80;
+  bool a2m3 = hr & 0x80;
+  bool a2m2 = min & 0x80;
+
+  if (a2m4 && a2m3 && a2m2) {
+    return AL2_EVERY_MINUTE;
+  } else if (a2m4 && a2m3 && !a2m2) {
+    return AL2_MATCH_MINUTES;
+  } else if (a2m4 && !a2m3 && !a2m2) {
+    return AL2_MATCH_HOURS;
+  } else if (!a2m4 && !a2m3 && !a2m2 && !dy_dt) {
+    return AL2_MATCH_DATE;
+  } else if (!a2m4 && !a2m3 && !a2m2 && dy_dt) {
+    return AL2_MATCH_DAY;
+  } else {
+    return AL2_INVALID;
+  }
+}
+
+void DS3231::setAlarm2(alarm_2_rate rate, const tm *timeptr) {
+  uint8_t min = bin2bcd(timeptr->tm_min);
+  uint8_t hr = bin2bcd(timeptr->tm_hour);
+  uint8_t date = bin2bcd(timeptr->tm_mday);
+  uint8_t wday = timeptr->tm_wday;
+  if (wday == 0) {
+    // Sunday
+    wday = 7;
+  }
+
+  switch (rate) {
+    case AL2_EVERY_MINUTE:
+      min |= 0x80;
+      [[fallthrough]];
+    case AL2_MATCH_MINUTES:
+      hr |= 0x80;
+      [[fallthrough]];
+    case AL2_MATCH_HOURS:
+      date |= 0x80;
+      [[fallthrough]];
+    default:
+      break;
+    case AL2_MATCH_DAY:
+      date |= 0x40;
+      break;
+  }
+
+  _wire.beginTransmission(ADDRESS);
+  _wire.write(DS3231_AL2_MIN);
+  _wire.write(min);
+  _wire.write(hr);
+  _wire.write(date);
+  _wire.endTransmission();
+}
+
+int8_t DS3231::getAgingOffset() {
+  return static_cast<int8_t>(readReg(DS3231_AGING));
+}
+
+void DS3231::setAgingOffset(int8_t offset) {
+  writeReg(DS3231_AGING, static_cast<uint8_t>(offset));
+}
+
+float DS3231::getTemperature() {
+  _wire.beginTransmission(ADDRESS);
+  _wire.write(DS3231_TEMP_MSB);
+  _wire.endTransmission();
+
+  _wire.requestFrom(ADDRESS, uint8_t(2));
+  uint8_t msb = _wire.read();
+  uint8_t lsb = _wire.read();
+
+  int16_t temp = (msb << 8) | lsb;
+  return temp / 256.0f;
 }
