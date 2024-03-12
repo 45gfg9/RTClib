@@ -67,6 +67,15 @@ static uint8_t i2c_rtc_read(TwoWire &wire, uint8_t dev, uint8_t addr) {
   return wire.read();
 }
 
+#define MASK_BOOL_REG_BITS(reg, maskbits, boolval)  \
+  do {                                              \
+    uint8_t mask = (boolval) ? (maskbits) : 0;      \
+    uint8_t regval = readReg(reg);                  \
+    if ((regval & (maskbits)) != mask) {            \
+      writeReg(reg, (regval & ~(maskbits)) | mask); \
+    }                                               \
+  } while (0)
+
 DS1302::DS1302(uint8_t ce, uint8_t sck, uint8_t io) : _ce(ce), _sck(sck), _io(io) {}
 
 bool DS1302::setup() {
@@ -79,12 +88,17 @@ bool DS1302::setup() {
 }
 
 uint8_t DS1302::_read() {
-  // FIXME: this works while shiftIn() doesn't
   pinMode(_io, INPUT);
+
+  if (false) {
+    // FIXME: shiftIn() will not work
+    return shiftIn(_io, _sck, LSBFIRST);
+  }
+
   uint8_t value = 0;
-  for (uint8_t i = 0; i < 8; ++i) {
+  for (uint8_t i = 8; i; --i) {
     uint8_t bit = digitalRead(_io);
-    value |= (bit << i); // LSB first
+    value = (value >> 1) | (bit ? 0x80 : 0); // LSB first
     digitalWrite(_sck, HIGH);
     digitalWrite(_sck, LOW);
   }
@@ -149,15 +163,11 @@ void DS1302::setTime(const tm *timeptr) {
 }
 
 bool DS1302::isRunning() {
-  return !(readReg(DS1302_R_SEC) & 0x80);
+  return (readReg(DS1302_R_SEC) & 0x80) == 0;
 }
 
 void DS1302::setRunning(bool running) {
-  uint8_t sec = readReg(DS1302_R_SEC);
-  uint8_t ch = running ? 0 : 0x80;
-  if ((sec & 0x80) != ch) {
-    writeReg(DS1302_W_SEC, (sec & 0x7f) | ch);
-  }
+  MASK_BOOL_REG_BITS(DS1302_R_SEC, 0x80, !running);
 }
 
 DS1302::trickle_charger_t DS1302::getTrickleCharger() {
@@ -267,21 +277,17 @@ void DS1307::setTime(const tm *timeptr) {
 }
 
 bool DS1307::isRunning() {
-  return !(readReg(DS1307_SEC) & 0x80);
+  return (readReg(DS1307_SEC) & 0x80) == 0;
 }
 
 void DS1307::setRunning(bool running) {
-  uint8_t sec = readReg(DS1307_SEC);
-  uint8_t ch = running ? 0 : 0x80;
-  if ((sec & 0x80) != ch) {
-    writeReg(DS1307_SEC, (sec & 0x7f) | ch);
-  }
+  MASK_BOOL_REG_BITS(DS1307_SEC, 0x80, !running);
 }
 
 DS1307::sqw_out_t DS1307::getSQWOut() {
   uint8_t r = readReg(DS1307_CTRL);
 
-  if ((r & 0x10) == 0x10) {
+  if (r & 0x10) {
     // SQWE set
     return static_cast<sqw_out_t>(r & 0x7f);
   }
