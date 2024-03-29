@@ -237,23 +237,31 @@ public:
   bool isRunning();
   void setRunning(bool running);
 
+  bool getINTCN();
+  void setINTCN(bool intcn);
+
+  bool getBBSQW();
+  void setBBSQW(bool bbsqw);
+
   sqw_t getSQWFreq();
   void setSQWFreq(sqw_t freq);
 
-  bool isInterruptEnabled();
-  void setInterruptEnabled(bool enabled);
+  bool isIntrEnabled();
+  void setIntrEnabled(bool enabled);
 
-  bool isAlarm1InterruptEnabled();
-  void setAlarm1InterruptEnabled(bool enabled);
+  alarm_1_rate getAL1(tm *timeptr);
+  void setAL1(alarm_1_rate rate, const tm *timeptr);
+  bool isAL1IntrEnabled();
+  void setAL1IntrEnabled(bool enabled);
+  bool getAL1IntrFlag();
+  void clearAL1IntrFlag();
 
-  bool isAlarm2InterruptEnabled();
-  void setAlarm2InterruptEnabled(bool enabled);
-
-  alarm_1_rate getAlarm1(tm *timeptr);
-  void setAlarm1(alarm_1_rate rate, const tm *timeptr);
-
-  alarm_2_rate getAlarm2(tm *timeptr);
-  void setAlarm2(alarm_2_rate rate, const tm *timeptr);
+  alarm_2_rate getAL2(tm *timeptr);
+  void setAL2(alarm_2_rate rate, const tm *timeptr);
+  bool isAL2IntrEnabled();
+  void setAL2IntrEnabled(bool enabled);
+  bool getAL2IntrFlag();
+  void clearAL2IntrFlag();
 
   int8_t getAgingOffset();
   void setAgingOffset(int8_t offset);

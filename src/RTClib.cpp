@@ -397,6 +397,22 @@ void DS3231::setRunning(bool running) {
   MASK_BOOL_REG_BITS(DS3231_SEC, 0x80, !running);
 }
 
+bool DS3231::getINTCN() {
+  return (readReg(DS3231_CTRL) & 0x04) != 0;
+}
+
+void DS3231::setINTCN(bool intcn) {
+  MASK_BOOL_REG_BITS(DS3231_CTRL, 0x04, intcn);
+}
+
+bool DS3231::getBBSQW() {
+  return (readReg(DS3231_CTRL) & 0x40) != 0;
+}
+
+void DS3231::setBBSQW(bool bbsqw) {
+  MASK_BOOL_REG_BITS(DS3231_CTRL, 0x40, bbsqw);
+}
+
 DS3231::sqw_t DS3231::getSQWFreq() {
   return static_cast<sqw_t>(readReg(DS3231_CTRL) & 0x18);
 }
@@ -406,31 +422,47 @@ void DS3231::setSQWFreq(sqw_t freq) {
   writeReg(DS3231_CTRL, (ctrl & 0xe7) | freq);
 }
 
-bool DS3231::isInterruptEnabled() {
+bool DS3231::isIntrEnabled() {
   return (readReg(DS3231_CTRL) & 0x04) != 0;
 }
 
-void DS3231::setInterruptEnabled(bool enabled) {
+void DS3231::setIntrEnabled(bool enabled) {
   MASK_BOOL_REG_BITS(DS3231_CTRL, 0x04, enabled);
 }
 
-bool DS3231::isAlarm1InterruptEnabled() {
+bool DS3231::isAL1IntrEnabled() {
   return (readReg(DS3231_CTRL) & 0x01) != 0;
 }
 
-void DS3231::setAlarm1InterruptEnabled(bool enabled) {
+void DS3231::setAL1IntrEnabled(bool enabled) {
   MASK_BOOL_REG_BITS(DS3231_CTRL, 0x01, enabled);
 }
 
-bool DS3231::isAlarm2InterruptEnabled() {
+bool DS3231::getAL1IntrFlag() {
+  return (readReg(DS3231_STATUS) & 0x01) != 0;
+}
+
+void DS3231::clearAL1IntrFlag() {
+  MASK_BOOL_REG_BITS(DS3231_STATUS, 0x01, 0);
+}
+
+bool DS3231::isAL2IntrEnabled() {
   return (readReg(DS3231_CTRL) & 0x02) != 0;
 }
 
-void DS3231::setAlarm2InterruptEnabled(bool enabled) {
+void DS3231::setAL2IntrEnabled(bool enabled) {
   MASK_BOOL_REG_BITS(DS3231_CTRL, 0x02, enabled);
 }
 
-DS3231::alarm_1_rate DS3231::getAlarm1(tm *timeptr) {
+bool DS3231::getAL2IntrFlag() {
+  return (readReg(DS3231_STATUS) & 0x02) != 0;
+}
+
+void DS3231::clearAL2IntrFlag() {
+  MASK_BOOL_REG_BITS(DS3231_STATUS, 0x02, 0);
+}
+
+DS3231::alarm_1_rate DS3231::getAL1(tm *timeptr) {
   _wire.beginTransmission(ADDRESS);
   _wire.write(DS3231_AL1_SEC);
   _wire.endTransmission();
@@ -483,7 +515,7 @@ DS3231::alarm_1_rate DS3231::getAlarm1(tm *timeptr) {
   }
 }
 
-void DS3231::setAlarm1(alarm_1_rate rate, const tm *timeptr) {
+void DS3231::setAL1(alarm_1_rate rate, const tm *timeptr) {
   uint8_t sec = bin2bcd(timeptr->tm_sec);
   uint8_t min = bin2bcd(timeptr->tm_min);
   uint8_t hr = bin2bcd(timeptr->tm_hour);
@@ -523,7 +555,7 @@ void DS3231::setAlarm1(alarm_1_rate rate, const tm *timeptr) {
   _wire.endTransmission();
 }
 
-DS3231::alarm_2_rate DS3231::getAlarm2(tm *timeptr) {
+DS3231::alarm_2_rate DS3231::getAL2(tm *timeptr) {
   _wire.beginTransmission(ADDRESS);
   _wire.write(DS3231_AL2_MIN);
   _wire.endTransmission();
@@ -571,7 +603,7 @@ DS3231::alarm_2_rate DS3231::getAlarm2(tm *timeptr) {
   }
 }
 
-void DS3231::setAlarm2(alarm_2_rate rate, const tm *timeptr) {
+void DS3231::setAL2(alarm_2_rate rate, const tm *timeptr) {
   uint8_t min = bin2bcd(timeptr->tm_min);
   uint8_t hr = bin2bcd(timeptr->tm_hour);
   uint8_t date = bin2bcd(timeptr->tm_mday);
