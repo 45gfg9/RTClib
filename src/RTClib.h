@@ -148,7 +148,7 @@ public:
   static constexpr uint8_t ADDRESS = 0x68;
   static constexpr uint8_t RAM_SIZE = 56;
 
-  DS1307(TwoWire &wire = Wire);
+  explicit DS1307(TwoWire &wire = Wire);
 
   bool setup();
 
@@ -204,7 +204,7 @@ public:
 
   static constexpr uint8_t ADDRESS = 0x68;
 
-  DS3231(TwoWire &wire = Wire);
+  explicit DS3231(TwoWire &wire = Wire);
 
   bool setup();
 
