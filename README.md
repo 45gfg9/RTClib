@@ -26,7 +26,7 @@ The development of this library started when NeiroN, author of another RTC libra
 - **No dependencies**: It is a standalone library that only depends on the Arduino core and standard C/C++ libraries that are available even in avr-libc.
 - **Modern C/C++**: Written in C++11 with Arduino ecosystem in mind. Inside you'll find good use of iterators, RAII, and more.
 - **Minimal Overhead**: The library is designed to be as lightweight as possible. Optimizations are made to a certain extent where usability and readability are not compromised.
-- **No Reinventing the Wheel**: You'll find no auxiliary classes, no `DateTime` class, no `Time` class, no `TimeSpan` class, etc. We already have standardized `time_t` and `tm`. We already have `localtime`, `mktime`, `asctime` and more. So why reinvent the wheel when learning to cope with the standard is (almost certainly) a better investment in the long run?
+- **No Reinventing the Wheel**: You'll find no auxiliary classes, no `DateTime` class, no `Time` class, no `TimeSpan` class, etc. We already have standardized [`time_t`](https://en.cppreference.com/w/cpp/chrono/c/time_t) and [`tm`](https://en.cppreference.com/w/cpp/chrono/c/tm). We already have [`localtime`](https://en.cppreference.com/w/cpp/chrono/c/localtime), [`mktime`](https://en.cppreference.com/w/cpp/chrono/c/mktime), [`asctime`](https://en.cppreference.com/w/cpp/chrono/c/asctime), [`difftime`](https://en.cppreference.com/w/cpp/chrono/c/difftime) and more (yes, they are [available in avr-libc](https://avr-libc.nongnu.org/user-manual/group__avr__time.html)). So why reinvent the wheel when learning to cope with the standard is (almost certainly) a better investment in the long run?
 
 ## But there is a catch here, isn't it?
 
