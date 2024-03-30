@@ -249,4 +249,93 @@ public:
   float getTemperature();
 };
 
+// RX8025T: only basic timekeeping functions are stable
+// other functions are subject to change
+class RX8025T {
+  TwoWire &_wire;
+
+public:
+  enum temp_comp_intv : uint8_t {
+    TC_0S5 = 0x00,
+    TC_2S = 0x40,
+    TC_10S = 0x80,
+    TC_30S = 0xc0,
+  };
+
+  enum alarm_day : uint8_t {
+    AL_SUN = 0x81,
+    AL_MON = 0x82,
+    AL_TUE = 0x84,
+    AL_WED = 0x88,
+    AL_THU = 0x90,
+    AL_FRI = 0xa0,
+    AL_SAT = 0xc0,
+    AL_EVERY_DAY = 0xff,
+  };
+
+  enum timer_freq : uint8_t {
+    TF_4096HZ = 0x00,
+    TF_64HZ = 0x01,
+    TF_SECOND = 0x02,
+    TF_MINUTE = 0x03,
+    TF_OFF = 0xff,
+  };
+
+  enum fout_freq : uint8_t {
+    FOUT_32768HZ = 0x00,
+    FOUT_1024HZ = 0x04,
+    FOUT_1HZ = 0x08,
+  };
+
+  static constexpr uint8_t ADDRESS = 0x32;
+
+  explicit RX8025T(TwoWire &wire = Wire);
+
+  bool setup();
+
+  uint8_t readReg(uint8_t addr);
+  void writeReg(uint8_t addr, uint8_t val);
+
+  void getTime(tm *timeptr);
+  void setTime(const tm *timeptr);
+
+  bool isRunning();
+  void setRunning(bool running);
+
+  temp_comp_intv getTempCompInterval();
+  void setTempCompInterval(temp_comp_intv interval);
+
+  uint8_t getRAM();
+  void setRAM(uint8_t val);
+
+  uint16_t getTimer();
+  void setTimer(uint16_t val);
+  timer_freq getTimerFreq();
+  void setTimerFreq(timer_freq freq);
+  bool isTimerIntrEnabled();
+  void setTimerIntrEnabled(bool enabled);
+  bool getTimerFlag();
+  void clearTimerFlag();
+
+  fout_freq getFOUT();
+  void setFOUT(fout_freq freq);
+
+  bool getVLF();
+  void clearVLF();
+  bool getVDET();
+  void clearVDET();
+  bool getUpdateFlag();
+  void clearUpdateFlag();
+  bool getUSEL();
+  void setUSEL(bool usel);
+
+  // alarm api is subject to change
+  void getAlarm(tm *timeptr);
+  void setAlarm(const tm *timeptr);
+  bool isAlarmIntrEnabled();
+  void setAlarmIntrEnabled(bool enabled);
+  bool getAlarmFlag();
+  void clearAlarmFlag();
+};
+
 #endif

@@ -81,6 +81,25 @@ namespace __rtclib_details {
     DS3231_TEMP_MSB = 0x11,
     DS3231_TEMP_LSB = 0x12,
   };
+
+  enum RX8025TRegAddr : uint8_t {
+    RX8025T_SEC = 0x00,
+    RX8025T_MIN = 0x01,
+    RX8025T_HOUR = 0x02,
+    RX8025T_WEEK = 0x03,
+    RX8025T_DAT = 0x04,
+    RX8025T_MONTH = 0x05,
+    RX8025T_YEAR = 0x06,
+    RX8025T_RAM = 0x07,
+    RX8025T_AL_MIN = 0x08,
+    RX8025T_AL_HOUR = 0x09,
+    RX8025T_AL_WK_D = 0x0a,
+    RX8025T_TIM0 = 0x0b,
+    RX8025T_TIM1 = 0x0c,
+    RX8025T_EXT = 0x0d,
+    RX8025T_FLAG = 0x0e,
+    RX8025T_CTRL = 0x0f,
+  };
 } // namespace __rtclib_details
 
 using namespace __rtclib_details;
@@ -684,4 +703,281 @@ float DS3231::getTemperature() {
 
   int16_t temp = (msb << 8) | lsb;
   return temp / 256.0f;
+}
+
+RX8025T::RX8025T(TwoWire &wire) : _wire(wire) {}
+
+bool RX8025T::setup() {
+  _wire.beginTransmission(ADDRESS);
+  _wire.write(RX8025T_FLAG);
+  if (_wire.endTransmission() != 0) {
+    return false;
+  }
+
+  _wire.requestFrom(ADDRESS, uint8_t(1));
+  uint8_t flag = _wire.read();
+  _wire.endTransmission();
+
+  // check VLF
+  if (flag & 0x02) {
+    // reinit all
+    _wire.beginTransmission(ADDRESS);
+    _wire.write(RX8025T_SEC);
+    _wire.write(0x00); // SEC
+    _wire.write(0x00); // MIN
+    _wire.write(0x00); // HOUR
+    _wire.write(0x40); // WEEK
+    _wire.write(0x01); // DAY
+    _wire.write(0x01); // MONTH
+    _wire.write(0x00); // YEAR
+    _wire.write(0x00); // RAM
+    _wire.write(0x00); // AL_MIN
+    _wire.write(0x00); // AL_HOUR
+    _wire.write(0x00); // AL_WK_D
+    _wire.write(0x00); // TIM0
+    _wire.write(0x00); // TIM1
+    _wire.write(0x00); // EXT
+    _wire.write(0x00); // FLAG
+    _wire.write(0x40); // CTRL
+    _wire.endTransmission();
+  }
+
+  return true;
+}
+
+uint8_t RX8025T::readReg(uint8_t addr) {
+  return i2c_rtc_read(_wire, ADDRESS, addr);
+}
+
+void RX8025T::writeReg(uint8_t addr, uint8_t val) {
+  i2c_rtc_write(_wire, ADDRESS, addr, val);
+}
+
+void RX8025T::getTime(tm *timeptr) {
+  _wire.beginTransmission(ADDRESS);
+  _wire.write(RX8025T_SEC);
+  _wire.endTransmission();
+
+  _wire.requestFrom(ADDRESS, uint8_t(7));
+  timeptr->tm_sec = bcd2bin(_wire.read() & 0x7f);
+  timeptr->tm_min = bcd2bin(_wire.read() & 0x7f);
+  timeptr->tm_hour = bcd2bin(_wire.read() & 0x3f);
+  timeptr->tm_wday = __builtin_ctz(_wire.read());
+  timeptr->tm_mday = bcd2bin(_wire.read() & 0x3f);
+  timeptr->tm_mon = bcd2bin(_wire.read() & 0x1f) - 1;
+  timeptr->tm_year = bcd2bin(_wire.read()) + 100;
+}
+
+void RX8025T::setTime(const tm *t) {
+  _wire.beginTransmission(ADDRESS);
+  _wire.write(RX8025T_SEC);
+  _wire.write(bin2bcd(t->tm_sec));
+  _wire.write(bin2bcd(t->tm_min));
+  _wire.write(bin2bcd(t->tm_hour));
+  _wire.write(1U << t->tm_wday);
+  _wire.write(bin2bcd(t->tm_mday));
+  _wire.write(bin2bcd(t->tm_mon + 1));
+  _wire.write(bin2bcd(t->tm_year - 100));
+  _wire.endTransmission();
+}
+
+bool RX8025T::isRunning() {
+  return (readReg(RX8025T_CTRL) & 0x01) == 0;
+}
+
+void RX8025T::setRunning(bool running) {
+  MASK_BOOL_REG_BITS(RX8025T_CTRL, 0x01, !running);
+}
+
+RX8025T::temp_comp_intv RX8025T::getTempCompInterval() {
+  return static_cast<temp_comp_intv>(readReg(RX8025T_CTRL) & 0xc0);
+}
+
+void RX8025T::setTempCompInterval(temp_comp_intv interval) {
+  writeReg(RX8025T_CTRL, (readReg(RX8025T_CTRL) & 0x3f) | interval);
+}
+
+uint8_t RX8025T::getRAM() {
+  return readReg(RX8025T_RAM);
+}
+
+void RX8025T::setRAM(uint8_t val) {
+  writeReg(RX8025T_RAM, val);
+}
+
+RX8025T::timer_freq RX8025T::getTimerFreq() {
+  uint8_t ext = readReg(RX8025T_EXT);
+
+  if ((ext & 0x10) == 0) {
+    // TE bit is 0
+    return TF_OFF;
+  } else {
+    return static_cast<timer_freq>(ext & 0x03);
+  }
+}
+
+void RX8025T::setTimerFreq(timer_freq freq) {
+  if (freq == TF_OFF) {
+    MASK_BOOL_REG_BITS(RX8025T_EXT, 0x10, 0);
+  } else {
+    writeReg(RX8025T_EXT, (readReg(RX8025T_EXT) & 0xfc) | freq);
+  }
+}
+
+bool RX8025T::isTimerIntrEnabled() {
+  return (readReg(RX8025T_CTRL) & 0x10) != 0;
+}
+
+void RX8025T::setTimerIntrEnabled(bool enabled) {
+  MASK_BOOL_REG_BITS(RX8025T_CTRL, 0x10, enabled);
+}
+
+bool RX8025T::getTimerFlag() {
+  return (readReg(RX8025T_FLAG) & 0x10) != 0;
+}
+
+void RX8025T::clearTimerFlag() {
+  MASK_BOOL_REG_BITS(RX8025T_FLAG, 0x10, 0);
+}
+
+RX8025T::fout_freq RX8025T::getFOUT() {
+  uint8_t freq = readReg(RX8025T_CTRL) & 0x0c;
+  if (freq == 0x0c) {
+    // 2'b11 is also 32768Hz
+    return FOUT_32768HZ;
+  } else {
+    return static_cast<fout_freq>(freq);
+  }
+}
+
+void RX8025T::setFOUT(fout_freq freq) {
+  writeReg(RX8025T_CTRL, (readReg(RX8025T_CTRL) & 0xf3) | freq);
+}
+
+bool RX8025T::getVLF() {
+  return (readReg(RX8025T_FLAG) & 0x02) != 0;
+}
+
+void RX8025T::clearVLF() {
+  MASK_BOOL_REG_BITS(RX8025T_FLAG, 0x02, 0);
+}
+
+bool RX8025T::getVDET() {
+  return (readReg(RX8025T_FLAG) & 0x01) != 0;
+}
+
+void RX8025T::clearVDET() {
+  MASK_BOOL_REG_BITS(RX8025T_FLAG, 0x01, 0);
+}
+
+bool RX8025T::getUpdateFlag() {
+  return (readReg(RX8025T_FLAG) & 0x20) != 0;
+}
+
+void RX8025T::clearUpdateFlag() {
+  MASK_BOOL_REG_BITS(RX8025T_FLAG, 0x20, 0);
+}
+
+bool RX8025T::getUSEL() {
+  return (readReg(RX8025T_EXT) & 0x20) != 0;
+}
+
+void RX8025T::setUSEL(bool usel) {
+  MASK_BOOL_REG_BITS(RX8025T_EXT, 0x20, usel);
+}
+
+uint16_t RX8025T::getTimer() {
+  _wire.beginTransmission(ADDRESS);
+  _wire.write(RX8025T_TIM0);
+  _wire.endTransmission();
+
+  _wire.requestFrom(ADDRESS, uint8_t(2));
+  uint16_t val = _wire.read();
+  val |= _wire.read() << 8;
+  return val;
+}
+
+void RX8025T::setTimer(uint16_t val) {
+  _wire.beginTransmission(ADDRESS);
+  _wire.write(RX8025T_TIM0);
+  _wire.write(val & 0xff);
+  _wire.write(val >> 8);
+  _wire.endTransmission();
+}
+
+void RX8025T::getAlarm(tm *timeptr) {
+  _wire.beginTransmission(ADDRESS);
+  _wire.write(RX8025T_AL_MIN);
+  _wire.endTransmission();
+
+  _wire.requestFrom(ADDRESS, uint8_t(6));
+  uint8_t min = _wire.read();
+  uint8_t hour = _wire.read();
+  uint8_t day = _wire.read();
+  _wire.read(); // Timer/Counter 0
+  _wire.read(); // Timer/Counter 1
+  uint8_t ext = _wire.read();
+
+  bool wada = ext & 0x40;
+
+  timeptr->tm_min = (min & 0x80) ? -1 : bcd2bin(min & 0x7f);
+  timeptr->tm_hour = (hour & 0x80) ? -1 : bcd2bin(hour & 0x3f);
+
+  if (day & 0x80) {
+    timeptr->tm_wday = -1;
+    timeptr->tm_mday = -1;
+  } else if (wada) {
+    timeptr->tm_wday = -1;
+    timeptr->tm_mday = bcd2bin(day & 0x3f);
+  } else {
+    timeptr->tm_wday = day;
+    timeptr->tm_mday = -1;
+  }
+}
+
+void RX8025T::setAlarm(const tm *timeptr) {
+  uint8_t min = (timeptr->tm_min == -1) ? 0x80 : bin2bcd(timeptr->tm_min);
+  uint8_t hour = (timeptr->tm_hour == -1) ? 0x80 : bin2bcd(timeptr->tm_hour);
+  uint8_t day = timeptr->tm_mday;
+  uint8_t wday = timeptr->tm_wday;
+  bool wada = false;
+
+  if ((day == -1 && wday == -1) || (day != -1 && wday != -1)) {
+    // does not match DAY/WEEK
+    day = 0x80;
+  } else if (day != -1) {
+    // sets DAY as target of alarm function
+    day = bin2bcd(day & 0x3f);
+    wada = true;
+  } else {
+    // sets WEEK as target of alarm function
+    day = wday;
+  }
+
+  _wire.beginTransmission(ADDRESS);
+  _wire.write(RX8025T_AL_MIN);
+  _wire.write(min);
+  _wire.write(hour);
+  _wire.write(day);
+  _wire.endTransmission();
+
+  if ((day & 0x80) == 0) {
+    MASK_BOOL_REG_BITS(RX8025T_EXT, 0x40, wada);
+  }
+}
+
+bool RX8025T::isAlarmIntrEnabled() {
+  return (readReg(RX8025T_CTRL) & 0x08) != 0;
+}
+
+void RX8025T::setAlarmIntrEnabled(bool enabled) {
+  MASK_BOOL_REG_BITS(RX8025T_CTRL, 0x08, enabled);
+}
+
+bool RX8025T::getAlarmFlag() {
+  return (readReg(RX8025T_FLAG) & 0x08) != 0;
+}
+
+void RX8025T::clearAlarmFlag() {
+  MASK_BOOL_REG_BITS(RX8025T_FLAG, 0x08, 0);
 }
