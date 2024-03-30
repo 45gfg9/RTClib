@@ -82,26 +82,6 @@ namespace __rtclib_details {
 }; // namespace __rtclib_details
 
 class DS1302 {
-  // RAII class for data transferring
-  class TransferHelper {
-    uint8_t _ce, _sck;
-
-    static constexpr uint8_t ce_to_sck_setup = 4;
-    static constexpr uint8_t ce_inactive_time = 4;
-
-  public:
-    TransferHelper(uint8_t ce, uint8_t sck) : _ce(ce), _sck(sck) {
-      digitalWrite(_sck, LOW);
-      digitalWrite(_ce, HIGH);
-      delayMicroseconds(ce_to_sck_setup);
-    }
-
-    ~TransferHelper() {
-      digitalWrite(_ce, LOW);
-      delayMicroseconds(ce_inactive_time);
-    }
-  };
-
   using RAMRef = __rtclib_details::RAMRef<DS1302>;
   using RAMPtr = __rtclib_details::RAMPtr<DS1302>;
 
