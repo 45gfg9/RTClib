@@ -132,10 +132,7 @@ bool DS1302::setup() {
 uint8_t DS1302::_read() {
   pinMode(_io, INPUT);
 
-  if (false) {
-    // FIXME: shiftIn() will not work
-    return shiftIn(_io, _sck, LSBFIRST);
-  }
+  // shiftIn() will not work
 
   uint8_t value = 0;
   for (uint8_t i = 8; i; --i) {
@@ -149,7 +146,17 @@ uint8_t DS1302::_read() {
 
 void DS1302::_write(uint8_t val) {
   pinMode(_io, OUTPUT);
-  shiftOut(_io, _sck, LSBFIRST, val);
+
+  // shiftOut() will not work
+
+  for (uint8_t i = 8; i; --i) {
+    digitalWrite(_io, val & 1);
+    val >>= 1;
+    digitalWrite(_sck, HIGH);
+    delayMicroseconds(1);
+    digitalWrite(_sck, LOW);
+    delayMicroseconds(1);
+  }
 }
 
 uint8_t DS1302::readReg(uint8_t addr) {
