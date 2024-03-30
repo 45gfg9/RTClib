@@ -276,7 +276,7 @@ public:
   enum timer_freq : uint8_t {
     TF_4096HZ = 0x00,
     TF_64HZ = 0x01,
-    TF_SECOND = 0x02,
+    TF_1HZ = 0x02,
     TF_MINUTE = 0x03,
     TF_OFF = 0xff,
   };
@@ -330,6 +330,63 @@ public:
   void setUSEL(bool usel);
 
   // alarm api is subject to change
+  void getAlarm(tm *timeptr);
+  void setAlarm(const tm *timeptr);
+  bool isAlarmIntrEnabled();
+  void setAlarmIntrEnabled(bool enabled);
+  bool getAlarmFlag();
+  void clearAlarmFlag();
+};
+
+class PCF8563 {
+  TwoWire &_wire;
+
+public:
+  enum clkout_freq : uint8_t {
+    CLKOUT_OFF = 0x00,
+    CLKOUT_32768HZ = 0x80,
+    CLKOUT_1024HZ = 0x81,
+    CLKOUT_32HZ = 0x82,
+    CLKOUT_1HZ = 0x83,
+  };
+
+  enum timer_freq : uint8_t {
+    TF_OFF = 0x00,
+    TF_4096HZ = 0x80,
+    TF_64HZ = 0x81,
+    TF_1HZ = 0x82,
+    TF_MINUTE = 0x83,
+  };
+
+  static constexpr uint8_t ADDRESS = 0x51;
+
+  explicit PCF8563(TwoWire &wire = Wire);
+
+  bool setup();
+
+  uint8_t readReg(uint8_t addr);
+  void writeReg(uint8_t addr, uint8_t val);
+
+  void getTime(tm *timeptr);
+  void setTime(const tm *timeptr);
+
+  bool isRunning();
+  void setRunning(bool running);
+
+  clkout_freq getCLKOut();
+  void setCLKOut(clkout_freq freq);
+
+  uint8_t getTimer();
+  void setTimer(uint8_t val);
+  timer_freq getTimerFreq();
+  void setTimerFreq(timer_freq freq);
+  bool isTimerIntrEnabled();
+  void setTimerIntrEnabled(bool enabled);
+  bool getTimerFlag();
+  void clearTimerFlag();
+  bool isTimerPulseMode();
+  void setTimerPulseMode(bool pulse_mode);
+
   void getAlarm(tm *timeptr);
   void setAlarm(const tm *timeptr);
   bool isAlarmIntrEnabled();

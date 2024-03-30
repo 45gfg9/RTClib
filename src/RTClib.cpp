@@ -100,6 +100,25 @@ namespace __rtclib_details {
     RX8025T_FLAG = 0x0e,
     RX8025T_CTRL = 0x0f,
   };
+
+  enum PCF8563RegAddr : uint8_t {
+    PCF8563_CTRL_1 = 0x00,
+    PCF8563_CTRL_2 = 0x01,
+    PCF8563_VL_SEC = 0x02,
+    PCF8563_MIN = 0x03,
+    PCF8563_HOUR = 0x04,
+    PCF8563_DAY = 0x05,
+    PCF8563_WEEK = 0x06,
+    PCF8563_CEN_MON = 0x07,
+    PCF8563_YEAR = 0x08,
+    PCF8563_AL_MIN = 0x09,
+    PCF8563_AL_HOUR = 0x0a,
+    PCF8563_AL_DAY = 0x0b,
+    PCF8563_AL_WEEK = 0x0c,
+    PCF8563_CLKOUT = 0x0d,
+    PCF8563_TIM_CTRL = 0x0e,
+    PCF8563_TIM = 0x0f,
+  };
 } // namespace __rtclib_details
 
 using namespace __rtclib_details;
@@ -980,4 +999,207 @@ bool RX8025T::getAlarmFlag() {
 
 void RX8025T::clearAlarmFlag() {
   MASK_BOOL_REG_BITS(RX8025T_FLAG, 0x08, 0);
+}
+
+PCF8563::PCF8563(TwoWire &wire) : _wire(wire) {}
+
+bool PCF8563::setup() {
+  _wire.beginTransmission(ADDRESS);
+  _wire.write(PCF8563_VL_SEC);
+  if (_wire.endTransmission() != 0) {
+    return false;
+  }
+
+  _wire.requestFrom(ADDRESS, uint8_t(1));
+  uint8_t vl = _wire.read();
+  _wire.endTransmission();
+
+  _wire.beginTransmission(ADDRESS);
+  _wire.write(PCF8563_CTRL_1);
+  _wire.write(0x00); // Control_status_1
+
+  if (vl & 0x80) {
+    // VL bit is set
+    _wire.write(0x00); // Control_status_2
+    _wire.write(0x00); // VL_seconds
+    _wire.write(0x00); // Minutes
+    _wire.write(0x00); // Hours
+    _wire.write(0x01); // Days
+    _wire.write(0x05); // Weekdays
+    _wire.write(0x01); // Century_months
+    _wire.write(0x00); // Years
+  }
+
+  _wire.endTransmission();
+
+  return true;
+}
+
+uint8_t PCF8563::readReg(uint8_t addr) {
+  return i2c_rtc_read(_wire, ADDRESS, addr);
+}
+
+void PCF8563::writeReg(uint8_t addr, uint8_t val) {
+  i2c_rtc_write(_wire, ADDRESS, addr, val);
+}
+
+void PCF8563::getTime(tm *timeptr) {
+  _wire.beginTransmission(ADDRESS);
+  _wire.write(PCF8563_VL_SEC);
+  _wire.endTransmission();
+
+  _wire.requestFrom(ADDRESS, uint8_t(7));
+  timeptr->tm_sec = bcd2bin(_wire.read() & 0x7f);
+  timeptr->tm_min = bcd2bin(_wire.read() & 0x7f);
+  timeptr->tm_hour = bcd2bin(_wire.read() & 0x3f);
+  timeptr->tm_mday = bcd2bin(_wire.read() & 0x3f);
+  timeptr->tm_wday = bcd2bin(_wire.read() & 0x07);
+  uint8_t cen_mon = _wire.read();
+  timeptr->tm_mon = bcd2bin(cen_mon & 0x1f) - 1;
+  timeptr->tm_year = bcd2bin(_wire.read()) + 100;
+
+  if (cen_mon & 0x80) {
+    // century bit set
+    cen_mon &= 0x7f;
+    timeptr->tm_year += 100;
+  }
+}
+
+void PCF8563::setTime(const tm *timeptr) {
+  uint8_t year = timeptr->tm_year - 100;
+  uint8_t cen_mon = bin2bcd(timeptr->tm_mon + 1);
+
+  if (year >= 100) {
+    cen_mon |= 0x80;
+    year -= 100;
+  }
+
+  _wire.beginTransmission(ADDRESS);
+  _wire.write(PCF8563_VL_SEC);
+  _wire.write(bin2bcd(timeptr->tm_sec));
+  _wire.write(bin2bcd(timeptr->tm_min));
+  _wire.write(bin2bcd(timeptr->tm_hour));
+  _wire.write(bin2bcd(timeptr->tm_mday));
+  _wire.write(bin2bcd(timeptr->tm_wday));
+  _wire.write(cen_mon);
+  _wire.write(bin2bcd(year));
+  _wire.endTransmission();
+}
+
+bool PCF8563::isRunning() {
+  return (readReg(PCF8563_CTRL_1) & 0x20) == 0;
+}
+
+void PCF8563::setRunning(bool running) {
+  MASK_BOOL_REG_BITS(PCF8563_CTRL_1, 0x20, !running);
+}
+
+PCF8563::clkout_freq PCF8563::getCLKOut() {
+  uint8_t clkout = readReg(PCF8563_CLKOUT);
+
+  if ((clkout & 0x80) == 0) {
+    // FE bit is 0
+    return CLKOUT_OFF;
+  } else {
+    return static_cast<clkout_freq>(clkout & 0x07);
+  }
+}
+
+void PCF8563::setCLKOut(clkout_freq freq) {
+  writeReg(PCF8563_CLKOUT, freq);
+}
+
+uint8_t PCF8563::getTimer() {
+  return readReg(PCF8563_TIM);
+}
+
+void PCF8563::setTimer(uint8_t val) {
+  writeReg(PCF8563_TIM, val);
+}
+
+PCF8563::timer_freq PCF8563::getTimerFreq() {
+  uint8_t tim_ctrl = readReg(PCF8563_TIM_CTRL);
+
+  if ((tim_ctrl & 0x80) == 0) {
+    // TE bit is 0
+    return TF_OFF;
+  } else {
+    return static_cast<timer_freq>(tim_ctrl);
+  }
+}
+
+void PCF8563::setTimerFreq(timer_freq freq) {
+  writeReg(PCF8563_TIM_CTRL, freq);
+}
+
+bool PCF8563::isTimerIntrEnabled() {
+  return (readReg(PCF8563_CTRL_2) & 0x01) != 0;
+}
+
+void PCF8563::setTimerIntrEnabled(bool enabled) {
+  MASK_BOOL_REG_BITS(PCF8563_CTRL_2, 0x01, enabled);
+}
+
+bool PCF8563::getTimerFlag() {
+  return (readReg(PCF8563_CTRL_2) & 0x04) != 0;
+}
+
+void PCF8563::clearTimerFlag() {
+  MASK_BOOL_REG_BITS(PCF8563_CTRL_2, 0x04, 0);
+}
+
+bool PCF8563::isTimerPulseMode() {
+  return (readReg(PCF8563_CTRL_2) & 0x10) != 0;
+}
+
+void PCF8563::setTimerPulseMode(bool pulse_mode) {
+  MASK_BOOL_REG_BITS(PCF8563_CTRL_2, 0x10, pulse_mode);
+}
+
+void PCF8563::getAlarm(tm *timeptr) {
+  _wire.beginTransmission(ADDRESS);
+  _wire.write(PCF8563_AL_MIN);
+  _wire.endTransmission();
+
+  _wire.requestFrom(ADDRESS, uint8_t(4));
+  uint8_t min = _wire.read();
+  uint8_t hour = _wire.read();
+  uint8_t day = _wire.read();
+  uint8_t wday = _wire.read();
+
+  timeptr->tm_min = (min & 0x80) ? -1 : bcd2bin(min & 0x7f);
+  timeptr->tm_hour = (hour & 0x80) ? -1 : bcd2bin(hour & 0x3f);
+  timeptr->tm_mday = (day & 0x80) ? -1 : bcd2bin(day & 0x3f);
+  timeptr->tm_wday = (wday & 0x80) ? -1 : bcd2bin(wday & 0x07);
+}
+
+void PCF8563::setAlarm(const tm *timeptr) {
+  uint8_t min = (timeptr->tm_min == -1) ? 0x80 : bin2bcd(timeptr->tm_min);
+  uint8_t hour = (timeptr->tm_hour == -1) ? 0x80 : bin2bcd(timeptr->tm_hour);
+  uint8_t day = (timeptr->tm_mday == -1) ? 0x80 : bin2bcd(timeptr->tm_mday);
+  uint8_t wday = (timeptr->tm_wday == -1) ? 0x80 : bin2bcd(timeptr->tm_wday);
+
+  _wire.beginTransmission(ADDRESS);
+  _wire.write(PCF8563_AL_MIN);
+  _wire.write(min);
+  _wire.write(hour);
+  _wire.write(day);
+  _wire.write(wday);
+  _wire.endTransmission();
+}
+
+bool PCF8563::isAlarmIntrEnabled() {
+  return (readReg(PCF8563_CTRL_2) & 0x02) != 0;
+}
+
+void PCF8563::setAlarmIntrEnabled(bool enabled) {
+  MASK_BOOL_REG_BITS(PCF8563_CTRL_2, 0x02, enabled);
+}
+
+bool PCF8563::getAlarmFlag() {
+  return (readReg(PCF8563_CTRL_2) & 0x08) != 0;
+}
+
+void PCF8563::clearAlarmFlag() {
+  MASK_BOOL_REG_BITS(PCF8563_CTRL_2, 0x08, 0);
 }
