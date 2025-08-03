@@ -156,7 +156,7 @@ static uint8_t i2c_rtc_read(TwoWire &wire, uint8_t dev, uint8_t addr) {
     }                                               \
   } while (0)
 
-DS1302::DS1302(uint8_t ce, uint8_t sck, uint8_t io) : _ce(ce), _sck(sck), _io(io) {}
+DS1302::DS1302(uint8_t ce, uint8_t sck, uint8_t io) : _ce {ce}, _sck {sck}, _io {io} {}
 
 bool DS1302::setup() {
   pinMode(_ce, OUTPUT);
@@ -193,7 +193,7 @@ void DS1302::_write(uint8_t val) {
     digitalWrite(_sck, HIGH);
     delayMicroseconds(1);
     digitalWrite(_sck, LOW);
-    delayMicroseconds(1);
+    // delayMicroseconds(1);
   }
 }
 
@@ -293,7 +293,7 @@ void DS1302::writeRAM(uint8_t index, uint8_t val) {
   _write(val);
 }
 
-DS1307::DS1307(TwoWire &wire) : _wire(wire) {}
+DS1307::DS1307(TwoWire &wire) : _wire {wire} {}
 
 bool DS1307::setup() {
   _wire.beginTransmission(ADDRESS);
@@ -386,7 +386,7 @@ void DS1307::setSQWOut(SqWaveFreq value) {
   writeReg(DS1307_CTRL, value);
 }
 
-DS3231::DS3231(TwoWire &wire) : _wire(wire) {}
+DS3231::DS3231(TwoWire &wire) : _wire {wire} {}
 
 bool DS3231::setup() {
   _wire.beginTransmission(ADDRESS);
@@ -724,7 +724,7 @@ float DS3231::getTemperature() {
   return temp / 256.0f;
 }
 
-RX8025T::RX8025T(TwoWire &wire) : _wire(wire) {}
+RX8025T::RX8025T(TwoWire &wire) : _wire {wire} {}
 
 bool RX8025T::setup() {
   _wire.beginTransmission(ADDRESS);
@@ -1001,7 +1001,7 @@ void RX8025T::clearAlarmFlag() {
   MASK_BOOL_REG_BITS(RX8025T_FLAG, 0x08, 0);
 }
 
-PCF8563::PCF8563(TwoWire &wire) : _wire(wire) {}
+PCF8563::PCF8563(TwoWire &wire) : _wire {wire} {}
 
 bool PCF8563::setup() {
   _wire.beginTransmission(ADDRESS);

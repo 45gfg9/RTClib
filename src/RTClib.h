@@ -12,7 +12,7 @@ namespace __rtclib_details {
     uint8_t _index;
 
   public:
-    RAMRef(T *thisPtr, uint8_t index) : _thisPtr(thisPtr), _index(index) {}
+    RAMRef(T *thisPtr, uint8_t index) : _thisPtr {thisPtr}, _index {index} {}
 
     operator uint8_t() { return _thisPtr->readRAM(_index); }
 
@@ -58,13 +58,25 @@ namespace __rtclib_details {
     uint8_t _index;
 
   public:
-    RAMPtr(T *thisPtr, uint8_t index) : _thisPtr(thisPtr), _index(index) {}
+    RAMPtr(T *thisPtr, uint8_t index) : _thisPtr {thisPtr}, _index {index} {}
 
-    operator uint8_t() const { return _index; }
+    explicit operator uint8_t() const { return _index; }
     RAMPtr &operator=(uint8_t index) {
       _index = index;
       return *this;
     }
+    RAMPtr &operator+=(int8_t off) {
+      _index += off;
+      return *this;
+    }
+    RAMPtr &operator-=(int8_t off) {
+      _index -= off;
+      return *this;
+    }
+    RAMPtr operator+(int8_t off) const { return RAMPtr(_thisPtr, _index + off); }
+    friend RAMPtr operator+(int8_t off, const RAMPtr &other) { return other + off; }
+    RAMPtr operator-(int8_t off) const { return RAMPtr(_thisPtr, _index - off); }
+    int8_t operator-(const RAMPtr &other) const { return (int8_t)_index - (int8_t)other._index; }
 
     RAMRef<T> operator*() { return RAMRef<T>(_thisPtr, _index); }
 
