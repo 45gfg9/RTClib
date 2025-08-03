@@ -93,14 +93,14 @@ class DS1302 {
   void _write(uint8_t val);
 
 public:
-  enum trickle_charger_t : uint8_t {
-    TC_OFF = 0x5c,
-    TC_1D2K = 0xa5,
-    TC_1D4K = 0xa6,
-    TC_1D8K = 0xa7,
-    TC_2D2K = 0xa9,
-    TC_2D4K = 0xaa,
-    TC_2D8K = 0xab,
+  enum TrickleChargerMode : uint8_t {
+    TC_OFF = 0x5c,  // off
+    TC_1D2K = 0xa5, // 1 diode, 2K ohm
+    TC_1D4K = 0xa6, // 1 diode, 4K ohm
+    TC_1D8K = 0xa7, // 1 diode, 8K ohm
+    TC_2D2K = 0xa9, // 2 diodes, 2K ohm
+    TC_2D4K = 0xaa, // 2 diodes, 4K ohm
+    TC_2D8K = 0xab, // 2 diodes, 8K ohm
   };
 
   static constexpr uint8_t RAM_SIZE = 31;
@@ -121,8 +121,8 @@ public:
   bool isRunning();
   void setRunning(bool running);
 
-  trickle_charger_t getTrickleCharger();
-  void setTrickleCharger(trickle_charger_t value);
+  TrickleChargerMode getTrickleCharger();
+  void setTrickleCharger(TrickleChargerMode value);
 
   RAMPtr begin() { return RAMPtr(this, 0); }
   RAMPtr end() { return RAMPtr(this, RAM_SIZE); }
@@ -136,13 +136,13 @@ class DS1307 {
   TwoWire &_wire;
 
 public:
-  enum sqw_out_t : uint8_t {
-    SO_LOW = 0x00,
-    SO_1HZ = 0x10,
-    SO_4KHZ = 0x11,
-    SO_8KHZ = 0x12,
-    SO_32KHZ = 0x13,
-    SO_HIGH = 0x80,
+  enum SqWaveFreq : uint8_t {
+    SO_LOW = 0x00,   // keep sqw pin low
+    SO_1HZ = 0x10,   // 1 Hz square wave
+    SO_4KHZ = 0x11,  // 4.096 kHz square wave
+    SO_8KHZ = 0x12,  // 8.192 kHz square wave
+    SO_32KHZ = 0x13, // 32.768 kHz square wave
+    SO_HIGH = 0x80,  // keep sqw pin high
   };
 
   static constexpr uint8_t ADDRESS = 0x68;
@@ -164,8 +164,8 @@ public:
   bool isRunning();
   void setRunning(bool running);
 
-  sqw_out_t getSQWOut();
-  void setSQWOut(sqw_out_t value);
+  SqWaveFreq getSQWOut();
+  void setSQWOut(SqWaveFreq value);
 
   RAMPtr begin() { return RAMPtr(this, 0); }
   RAMPtr end() { return RAMPtr(this, RAM_SIZE); }
@@ -176,14 +176,14 @@ class DS3231 {
   TwoWire &_wire;
 
 public:
-  enum sqw_t : uint8_t {
+  enum SqWaveFreq : uint8_t {
     SQW_1HZ = 0x0,
     SQW_1024HZ = 0x08,
     SQW_4096HZ = 0x10,
     SQW_8192HZ = 0x18,
   };
 
-  enum alarm_1_rate : uint8_t {
+  enum Alarm1Rate : uint8_t {
     AL1_EVERY_SECOND = 0x0f,
     AL1_MATCH_SECONDS = 0x0e,
     AL1_MATCH_MINUTES = 0x0c,
@@ -193,7 +193,7 @@ public:
     AL1_INVALID = 0xff,
   };
 
-  enum alarm_2_rate : uint8_t {
+  enum Alarm2Rate : uint8_t {
     AL2_EVERY_MINUTE = 0x07,
     AL2_MATCH_MINUTES = 0x06,
     AL2_MATCH_HOURS = 0x04,
@@ -223,21 +223,21 @@ public:
   bool getBBSQW();
   void setBBSQW(bool bbsqw);
 
-  sqw_t getSQWFreq();
-  void setSQWFreq(sqw_t freq);
+  SqWaveFreq getSQWFreq();
+  void setSQWFreq(SqWaveFreq freq);
 
   bool isIntrEnabled();
   void setIntrEnabled(bool enabled);
 
-  alarm_1_rate getAL1(tm *timeptr);
-  void setAL1(alarm_1_rate rate, const tm *timeptr);
+  Alarm1Rate getAL1(tm *timeptr);
+  void setAL1(Alarm1Rate rate, const tm *timeptr);
   bool isAL1IntrEnabled();
   void setAL1IntrEnabled(bool enabled);
   bool getAL1IntrFlag();
   void clearAL1IntrFlag();
 
-  alarm_2_rate getAL2(tm *timeptr);
-  void setAL2(alarm_2_rate rate, const tm *timeptr);
+  Alarm2Rate getAL2(tm *timeptr);
+  void setAL2(Alarm2Rate rate, const tm *timeptr);
   bool isAL2IntrEnabled();
   void setAL2IntrEnabled(bool enabled);
   bool getAL2IntrFlag();
@@ -255,14 +255,14 @@ class RX8025T {
   TwoWire &_wire;
 
 public:
-  enum temp_comp_intv : uint8_t {
+  enum TempCompIntv : uint8_t {
     TC_0S5 = 0x00,
     TC_2S = 0x40,
     TC_10S = 0x80,
     TC_30S = 0xc0,
   };
 
-  enum alarm_day : uint8_t {
+  enum AlarmDay : uint8_t {
     AL_SUN = 0x81,
     AL_MON = 0x82,
     AL_TUE = 0x84,
@@ -273,7 +273,7 @@ public:
     AL_EVERY_DAY = 0xff,
   };
 
-  enum timer_freq : uint8_t {
+  enum TimerFreq : uint8_t {
     TF_4096HZ = 0x00,
     TF_64HZ = 0x01,
     TF_1HZ = 0x02,
@@ -281,7 +281,7 @@ public:
     TF_OFF = 0xff,
   };
 
-  enum fout_freq : uint8_t {
+  enum FOUTFreq : uint8_t {
     FOUT_32768HZ = 0x00,
     FOUT_1024HZ = 0x04,
     FOUT_1HZ = 0x08,
@@ -302,23 +302,23 @@ public:
   bool isRunning();
   void setRunning(bool running);
 
-  temp_comp_intv getTempCompInterval();
-  void setTempCompInterval(temp_comp_intv interval);
+  TempCompIntv getTempCompInterval();
+  void setTempCompIntv(TempCompIntv interval);
 
   uint8_t getRAM();
   void setRAM(uint8_t val);
 
   uint16_t getTimer();
   void setTimer(uint16_t val);
-  timer_freq getTimerFreq();
-  void setTimerFreq(timer_freq freq);
+  TimerFreq getTimerFreq();
+  void setTimerFreq(TimerFreq freq);
   bool isTimerIntrEnabled();
   void setTimerIntrEnabled(bool enabled);
   bool getTimerFlag();
   void clearTimerFlag();
 
-  fout_freq getFOUT();
-  void setFOUT(fout_freq freq);
+  FOUTFreq getFOUT();
+  void setFOUT(FOUTFreq freq);
 
   bool getVLF();
   void clearVLF();
@@ -342,7 +342,7 @@ class PCF8563 {
   TwoWire &_wire;
 
 public:
-  enum clkout_freq : uint8_t {
+  enum CLKFreq : uint8_t {
     CLKOUT_OFF = 0x00,
     CLKOUT_32768HZ = 0x80,
     CLKOUT_1024HZ = 0x81,
@@ -350,7 +350,7 @@ public:
     CLKOUT_1HZ = 0x83,
   };
 
-  enum timer_freq : uint8_t {
+  enum TimerFreq : uint8_t {
     TF_OFF = 0x00,
     TF_4096HZ = 0x80,
     TF_64HZ = 0x81,
@@ -373,13 +373,13 @@ public:
   bool isRunning();
   void setRunning(bool running);
 
-  clkout_freq getCLKOut();
-  void setCLKOut(clkout_freq freq);
+  CLKFreq getCLKOut();
+  void setCLKOut(CLKFreq freq);
 
   uint8_t getTimer();
   void setTimer(uint8_t val);
-  timer_freq getTimerFreq();
-  void setTimerFreq(timer_freq freq);
+  TimerFreq getTimerFreq();
+  void setTimerFreq(TimerFreq freq);
   bool isTimerIntrEnabled();
   void setTimerIntrEnabled(bool enabled);
   bool getTimerFlag();

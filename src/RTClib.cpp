@@ -257,17 +257,17 @@ void DS1302::setRunning(bool running) {
   MASK_BOOL_REG_BITS(DS1302_R_SEC, 0x80, !running);
 }
 
-DS1302::trickle_charger_t DS1302::getTrickleCharger() {
+DS1302::TrickleChargerMode DS1302::getTrickleCharger() {
   uint8_t r = readReg(DS1302_R_TC);
 
   // we need this because the register value might not always be valid
   if ((r & 0xf0) == 0xa0 && (r & 0x0c) != 0 && (r & 0x03) != 0x03) {
-    return static_cast<trickle_charger_t>(r);
+    return static_cast<TrickleChargerMode>(r);
   }
   return TC_OFF;
 }
 
-void DS1302::setTrickleCharger(trickle_charger_t mode) {
+void DS1302::setTrickleCharger(TrickleChargerMode mode) {
   writeReg(DS1302_W_TC, mode);
 }
 
@@ -371,18 +371,18 @@ void DS1307::setRunning(bool running) {
   MASK_BOOL_REG_BITS(DS1307_SEC, 0x80, !running);
 }
 
-DS1307::sqw_out_t DS1307::getSQWOut() {
+DS1307::SqWaveFreq DS1307::getSQWOut() {
   uint8_t r = readReg(DS1307_CTRL);
 
   if (r & 0x10) {
     // SQWE set
-    return static_cast<sqw_out_t>(r & 0x7f);
+    return static_cast<SqWaveFreq>(r & 0x7f);
   }
 
-  return static_cast<sqw_out_t>(r & 0xfc);
+  return static_cast<SqWaveFreq>(r & 0xfc);
 }
 
-void DS1307::setSQWOut(sqw_out_t value) {
+void DS1307::setSQWOut(SqWaveFreq value) {
   writeReg(DS1307_CTRL, value);
 }
 
@@ -478,11 +478,11 @@ void DS3231::setBBSQW(bool bbsqw) {
   MASK_BOOL_REG_BITS(DS3231_CTRL, 0x40, bbsqw);
 }
 
-DS3231::sqw_t DS3231::getSQWFreq() {
-  return static_cast<sqw_t>(readReg(DS3231_CTRL) & 0x18);
+DS3231::SqWaveFreq DS3231::getSQWFreq() {
+  return static_cast<SqWaveFreq>(readReg(DS3231_CTRL) & 0x18);
 }
 
-void DS3231::setSQWFreq(sqw_t freq) {
+void DS3231::setSQWFreq(SqWaveFreq freq) {
   uint8_t ctrl = readReg(DS3231_CTRL);
   writeReg(DS3231_CTRL, (ctrl & 0xe7) | freq);
 }
@@ -527,7 +527,7 @@ void DS3231::clearAL2IntrFlag() {
   MASK_BOOL_REG_BITS(DS3231_STATUS, 0x02, 0);
 }
 
-DS3231::alarm_1_rate DS3231::getAL1(tm *timeptr) {
+DS3231::Alarm1Rate DS3231::getAL1(tm *timeptr) {
   _wire.beginTransmission(ADDRESS);
   _wire.write(DS3231_AL1_SEC);
   _wire.endTransmission();
@@ -580,7 +580,7 @@ DS3231::alarm_1_rate DS3231::getAL1(tm *timeptr) {
   }
 }
 
-void DS3231::setAL1(alarm_1_rate rate, const tm *timeptr) {
+void DS3231::setAL1(Alarm1Rate rate, const tm *timeptr) {
   uint8_t sec = bin2bcd(timeptr->tm_sec);
   uint8_t min = bin2bcd(timeptr->tm_min);
   uint8_t hr = bin2bcd(timeptr->tm_hour);
@@ -620,7 +620,7 @@ void DS3231::setAL1(alarm_1_rate rate, const tm *timeptr) {
   _wire.endTransmission();
 }
 
-DS3231::alarm_2_rate DS3231::getAL2(tm *timeptr) {
+DS3231::Alarm2Rate DS3231::getAL2(tm *timeptr) {
   _wire.beginTransmission(ADDRESS);
   _wire.write(DS3231_AL2_MIN);
   _wire.endTransmission();
@@ -668,7 +668,7 @@ DS3231::alarm_2_rate DS3231::getAL2(tm *timeptr) {
   }
 }
 
-void DS3231::setAL2(alarm_2_rate rate, const tm *timeptr) {
+void DS3231::setAL2(Alarm2Rate rate, const tm *timeptr) {
   uint8_t min = bin2bcd(timeptr->tm_min);
   uint8_t hr = bin2bcd(timeptr->tm_hour);
   uint8_t date = bin2bcd(timeptr->tm_mday);
@@ -808,11 +808,11 @@ void RX8025T::setRunning(bool running) {
   MASK_BOOL_REG_BITS(RX8025T_CTRL, 0x01, !running);
 }
 
-RX8025T::temp_comp_intv RX8025T::getTempCompInterval() {
-  return static_cast<temp_comp_intv>(readReg(RX8025T_CTRL) & 0xc0);
+RX8025T::TempCompIntv RX8025T::getTempCompInterval() {
+  return static_cast<TempCompIntv>(readReg(RX8025T_CTRL) & 0xc0);
 }
 
-void RX8025T::setTempCompInterval(temp_comp_intv interval) {
+void RX8025T::setTempCompIntv(TempCompIntv interval) {
   writeReg(RX8025T_CTRL, (readReg(RX8025T_CTRL) & 0x3f) | interval);
 }
 
@@ -824,18 +824,18 @@ void RX8025T::setRAM(uint8_t val) {
   writeReg(RX8025T_RAM, val);
 }
 
-RX8025T::timer_freq RX8025T::getTimerFreq() {
+RX8025T::TimerFreq RX8025T::getTimerFreq() {
   uint8_t ext = readReg(RX8025T_EXT);
 
   if ((ext & 0x10) == 0) {
     // TE bit is 0
     return TF_OFF;
   } else {
-    return static_cast<timer_freq>(ext & 0x03);
+    return static_cast<TimerFreq>(ext & 0x03);
   }
 }
 
-void RX8025T::setTimerFreq(timer_freq freq) {
+void RX8025T::setTimerFreq(TimerFreq freq) {
   if (freq == TF_OFF) {
     MASK_BOOL_REG_BITS(RX8025T_EXT, 0x10, 0);
   } else {
@@ -859,17 +859,17 @@ void RX8025T::clearTimerFlag() {
   MASK_BOOL_REG_BITS(RX8025T_FLAG, 0x10, 0);
 }
 
-RX8025T::fout_freq RX8025T::getFOUT() {
+RX8025T::FOUTFreq RX8025T::getFOUT() {
   uint8_t freq = readReg(RX8025T_CTRL) & 0x0c;
   if (freq == 0x0c) {
     // 2'b11 is also 32768Hz
     return FOUT_32768HZ;
   } else {
-    return static_cast<fout_freq>(freq);
+    return static_cast<FOUTFreq>(freq);
   }
 }
 
-void RX8025T::setFOUT(fout_freq freq) {
+void RX8025T::setFOUT(FOUTFreq freq) {
   writeReg(RX8025T_CTRL, (readReg(RX8025T_CTRL) & 0xf3) | freq);
 }
 
@@ -1094,18 +1094,18 @@ void PCF8563::setRunning(bool running) {
   MASK_BOOL_REG_BITS(PCF8563_CTRL_1, 0x20, !running);
 }
 
-PCF8563::clkout_freq PCF8563::getCLKOut() {
+PCF8563::CLKFreq PCF8563::getCLKOut() {
   uint8_t clkout = readReg(PCF8563_CLKOUT);
 
   if ((clkout & 0x80) == 0) {
     // FE bit is 0
     return CLKOUT_OFF;
   } else {
-    return static_cast<clkout_freq>(clkout & 0x07);
+    return static_cast<CLKFreq>(clkout & 0x07);
   }
 }
 
-void PCF8563::setCLKOut(clkout_freq freq) {
+void PCF8563::setCLKOut(CLKFreq freq) {
   writeReg(PCF8563_CLKOUT, freq);
 }
 
@@ -1117,18 +1117,18 @@ void PCF8563::setTimer(uint8_t val) {
   writeReg(PCF8563_TIM, val);
 }
 
-PCF8563::timer_freq PCF8563::getTimerFreq() {
+PCF8563::TimerFreq PCF8563::getTimerFreq() {
   uint8_t tim_ctrl = readReg(PCF8563_TIM_CTRL);
 
   if ((tim_ctrl & 0x80) == 0) {
     // TE bit is 0
     return TF_OFF;
   } else {
-    return static_cast<timer_freq>(tim_ctrl);
+    return static_cast<TimerFreq>(tim_ctrl);
   }
 }
 
-void PCF8563::setTimerFreq(timer_freq freq) {
+void PCF8563::setTimerFreq(TimerFreq freq) {
   writeReg(PCF8563_TIM_CTRL, freq);
 }
 
