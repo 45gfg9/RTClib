@@ -16,7 +16,6 @@ namespace __rtclib_details {
 
     operator uint8_t() { return _thisPtr->readRAM(_index); }
 
-    RAMRef &operator=(const RAMRef &ref) { return *this = *ref; }
     RAMRef &operator=(uint8_t val) {
       _thisPtr->writeRAM(_index, val);
       return *this;
@@ -39,14 +38,14 @@ namespace __rtclib_details {
 
     // Postfix increment
     uint8_t operator++(int) {
-      uint8_t ret = **this;
+      uint8_t ret = *this;
       ++*this;
       return ret;
     }
 
     // Postfix decrement
     uint8_t operator--(int) {
-      uint8_t ret = **this;
+      uint8_t ret = *this;
       --*this;
       return ret;
     }
