@@ -14,7 +14,7 @@ namespace __rtclib_details {
   public:
     RAMRef(T *thisPtr, uint8_t index) : _thisPtr(thisPtr), _index(index) {}
 
-    operator uint8_t() const { return _thisPtr->readRAM(_index); }
+    operator uint8_t() { return _thisPtr->readRAM(_index); }
 
     RAMRef &operator=(const RAMRef &ref) { return *this = *ref; }
     RAMRef &operator=(uint8_t val) {
