@@ -1,23 +1,25 @@
 #ifndef __RTCLIB_H__
 #define __RTCLIB_H__
 
+#include <stdint.h>
 #include <time.h>
 #include <Arduino.h>
 #include <Wire.h>
 
 namespace __rtclib_details {
-  template <typename T>
+  template <typename RTC>
   class RAMRef {
-    T *_thisPtr;
+    RTC *_rtc;
     uint8_t _index;
 
   public:
-    RAMRef(T *thisPtr, uint8_t index) : _thisPtr {thisPtr}, _index {index} {}
+    RAMRef(RTC *rtc, uint8_t index) : _rtc {rtc}, _index {index} {}
 
-    operator uint8_t() { return _thisPtr->readRAM(_index); }
+    operator uint8_t() { return _rtc->readRAM(_index); }
+    operator int() { return _rtc->readRAM(_index); }
 
     RAMRef &operator=(uint8_t val) {
-      _thisPtr->writeRAM(_index, val);
+      _rtc->writeRAM(_index, val);
       return *this;
     }
     RAMRef &operator+=(uint8_t in) { return *this = *this + in; }
@@ -51,15 +53,24 @@ namespace __rtclib_details {
     }
   };
 
-  template <typename T>
+  template <typename RTC>
   class RAMPtr {
-    T *_thisPtr;
+    RTC *_rtc;
     uint8_t _index;
 
   public:
-    RAMPtr(T *thisPtr, uint8_t index) : _thisPtr {thisPtr}, _index {index} {}
+    RAMPtr(RTC *rtc, uint8_t index) : _rtc {rtc}, _index {index} {}
 
     explicit operator uint8_t() const { return _index; }
+    explicit operator int() const { return _index; }
+
+    bool operator==(const RAMPtr &other) const { return _index == other._index; }
+    bool operator!=(const RAMPtr &other) const { return _index != other._index; }
+    bool operator<(const RAMPtr &other) const { return _index < other._index; }
+    bool operator<=(const RAMPtr &other) const { return _index <= other._index; }
+    bool operator>(const RAMPtr &other) const { return _index > other._index; }
+    bool operator>=(const RAMPtr &other) const { return _index >= other._index; }
+
     RAMPtr &operator=(uint8_t index) {
       _index = index;
       return *this;
@@ -72,15 +83,17 @@ namespace __rtclib_details {
       _index -= off;
       return *this;
     }
-    RAMPtr operator+(int8_t off) const { return RAMPtr(_thisPtr, _index + off); }
+    RAMPtr operator+(int8_t off) const { return RAMPtr {_rtc, _index + off}; }
     friend RAMPtr operator+(int8_t off, const RAMPtr &other) { return other + off; }
-    RAMPtr operator-(int8_t off) const { return RAMPtr(_thisPtr, _index - off); }
-    int8_t operator-(const RAMPtr &other) const { return (int8_t)_index - (int8_t)other._index; }
+    RAMPtr operator-(int8_t off) const { return RAMPtr {_rtc, _index - off}; }
+    int8_t operator-(const RAMPtr &other) const {
+      return static_cast<int8_t>(_index) - static_cast<int8_t>(other._index);
+    }
 
-    RAMRef<T> operator*() { return RAMRef<T>(_thisPtr, _index); }
+    RAMRef<RTC> operator*() { return RAMRef<RTC> {_rtc, _index}; }
 
-    RAMPtr operator++(int) { return RAMPtr(_thisPtr, _index++); }
-    RAMPtr operator--(int) { return RAMPtr(_thisPtr, _index--); }
+    RAMPtr operator++(int) { return RAMPtr {_rtc, _index++}; }
+    RAMPtr operator--(int) { return RAMPtr {_rtc, _index--}; }
     RAMPtr &operator++() {
       ++_index;
       return *this;
@@ -135,9 +148,9 @@ public:
   TrickleChargerMode getTrickleCharger();
   void setTrickleCharger(TrickleChargerMode value);
 
-  RAMPtr begin() { return RAMPtr(this, 0); }
-  RAMPtr end() { return RAMPtr(this, RAM_SIZE); }
-  RAMRef operator[](int index) { return RAMRef(this, index); }
+  RAMPtr begin() { return RAMPtr {this, 0}; }
+  RAMPtr end() { return RAMPtr {this, RAM_SIZE}; }
+  RAMRef operator[](int index) { return RAMRef {this, index}; }
 };
 
 class DS1307 {
@@ -178,9 +191,9 @@ public:
   SqWaveFreq getSQWOut();
   void setSQWOut(SqWaveFreq value);
 
-  RAMPtr begin() { return RAMPtr(this, 0); }
-  RAMPtr end() { return RAMPtr(this, RAM_SIZE); }
-  RAMRef operator[](int index) { return RAMRef(this, index); }
+  RAMPtr begin() { return RAMPtr {this, 0}; }
+  RAMPtr end() { return RAMPtr {this, RAM_SIZE}; }
+  RAMRef operator[](int index) { return RAMRef {this, index}; }
 };
 
 class DS3231 {
@@ -263,6 +276,13 @@ public:
 // RX8025T: only basic timekeeping functions are stable
 // other functions are subject to change
 class RX8025T {
+  using RAMRef = __rtclib_details::RAMRef<RX8025T>;
+  using RAMPtr = __rtclib_details::RAMPtr<RX8025T>;
+
+  friend class __rtclib_details::RAMRef<RX8025T>;
+  uint8_t readRAM(uint8_t index) { return getRAM(); }
+  void writeRAM(uint8_t index, uint8_t val) { setRAM(val); }
+
   TwoWire &_wire;
 
 public:
@@ -299,6 +319,7 @@ public:
   };
 
   static constexpr uint8_t ADDRESS = 0x32;
+  static constexpr uint8_t RAM_SIZE = 1;
 
   explicit RX8025T(TwoWire &wire = Wire);
 
@@ -347,6 +368,10 @@ public:
   void setAlarmIntrEnabled(bool enabled);
   bool getAlarmFlag();
   void clearAlarmFlag();
+
+  RAMPtr begin() { return RAMPtr {this, 0}; }
+  RAMPtr end() { return RAMPtr {this, RAM_SIZE}; }
+  RAMRef operator[](int index) { return RAMRef {this, index}; }
 };
 
 class PCF8563 {

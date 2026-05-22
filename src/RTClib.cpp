@@ -1,6 +1,16 @@
 #include "RTClib.h"
 
-namespace __rtclib_details {
+#ifndef likely
+#ifdef __GNUC__
+#define likely(x) __builtin_expect(!!(x), 1)
+#define unlikely(x) __builtin_expect(!!(x), 0)
+#else
+#define likely(x) (x)
+#define unlikely(x) (x)
+#endif
+#endif
+
+inline namespace __rtclib_details {
   // RAII class for data transferring to/from DS1302
   class TransferHelper {
     uint8_t _ce, _sck;
@@ -21,6 +31,7 @@ namespace __rtclib_details {
     }
   };
 
+  // TODO: move reg defs to header?
   enum DS1302RegAddr : uint8_t {
     DS1302_W_SEC = 0x80,
     DS1302_R_SEC = 0x81,
@@ -121,8 +132,6 @@ namespace __rtclib_details {
   };
 } // namespace __rtclib_details
 
-using namespace __rtclib_details;
-
 static constexpr uint8_t bcd2bin(uint8_t val) {
   return val - 6 * (val >> 4);
 }
@@ -143,17 +152,17 @@ static uint8_t i2c_rtc_read(TwoWire &wire, uint8_t dev, uint8_t addr) {
   wire.write(addr);
   wire.endTransmission();
 
-  wire.requestFrom(dev, uint8_t(1));
+  wire.requestFrom(dev, uint8_t {1});
   return wire.read();
 }
 
-#define MASK_BOOL_REG_BITS(reg, maskbits, boolval)  \
-  do {                                              \
-    uint8_t mask = (boolval) ? (maskbits) : 0;      \
-    uint8_t regval = readReg(reg);                  \
-    if ((regval & (maskbits)) != mask) {            \
-      writeReg(reg, (regval & ~(maskbits)) | mask); \
-    }                                               \
+#define MASK_BOOL_REG_BITS(addr, bits, en)        \
+  do {                                            \
+    uint8_t __mask = (en) ? (bits) : 0;           \
+    uint8_t __val = readReg(addr);                \
+    if ((__val & (bits)) != __mask) {             \
+      writeReg(addr, (__val & ~(bits)) | __mask); \
+    }                                             \
   } while (0)
 
 DS1302::DS1302(uint8_t ce, uint8_t sck, uint8_t io) : _ce {ce}, _sck {sck}, _io {io} {}
@@ -175,8 +184,9 @@ uint8_t DS1302::_read() {
   uint8_t value = 0;
   for (uint8_t i = 8; i; --i) {
     uint8_t bit = digitalRead(_io);
-    value = (value >> 1) | (bit ? 0x80 : 0); // LSB first
     digitalWrite(_sck, HIGH);
+    value = (value >> 1) | (bit ? 0x80 : 0); // LSB first
+    delayMicroseconds(1);
     digitalWrite(_sck, LOW);
   }
   return value;
@@ -189,30 +199,29 @@ void DS1302::_write(uint8_t val) {
 
   for (uint8_t i = 8; i; --i) {
     digitalWrite(_io, val & 1);
-    val >>= 1;
     digitalWrite(_sck, HIGH);
+    val >>= 1;
     delayMicroseconds(1);
     digitalWrite(_sck, LOW);
-    // delayMicroseconds(1);
   }
 }
 
 uint8_t DS1302::readReg(uint8_t addr) {
-  TransferHelper _tr(_ce, _sck);
+  TransferHelper _tr {_ce, _sck};
 
   _write(addr);
   return _read();
 }
 
 void DS1302::writeReg(uint8_t addr, uint8_t val) {
-  TransferHelper _tr(_ce, _sck);
+  TransferHelper _tr {_ce, _sck};
 
   _write(addr);
   _write(val);
 }
 
 void DS1302::getTime(tm *timeptr) {
-  TransferHelper _tr(_ce, _sck);
+  TransferHelper _tr {_ce, _sck};
 
   _write(DS1302_R_CLKBURST);
   timeptr->tm_sec = bcd2bin(_read() & 0x7f);
@@ -223,17 +232,17 @@ void DS1302::getTime(tm *timeptr) {
   timeptr->tm_wday = _read();
   timeptr->tm_year = bcd2bin(_read()) + 100;
 
-  if (timeptr->tm_wday == 7) {
+  if (unlikely(timeptr->tm_wday == 7)) {
     // Sunday
     timeptr->tm_wday = 0;
   }
 }
 
 void DS1302::setTime(const tm *timeptr) {
-  TransferHelper _tr(_ce, _sck);
+  TransferHelper _tr {_ce, _sck};
 
   uint8_t wday = timeptr->tm_wday;
-  if (wday == 0) {
+  if (unlikely(wday == 0)) {
     // Sunday
     wday = 7;
   }
@@ -276,7 +285,7 @@ uint8_t DS1302::readRAM(uint8_t index) {
     return 0;
   }
 
-  TransferHelper _tr(_ce, _sck);
+  TransferHelper _tr {_ce, _sck};
 
   _write(DS1302_R_RAM + (index << 1));
   return _read();
@@ -287,7 +296,7 @@ void DS1302::writeRAM(uint8_t index, uint8_t val) {
     return;
   }
 
-  TransferHelper _tr(_ce, _sck);
+  TransferHelper _tr {_ce, _sck};
 
   _write(DS1302_W_RAM + (index << 1));
   _write(val);
@@ -329,7 +338,7 @@ void DS1307::getTime(tm *timeptr) {
   _wire.write(DS1307_SEC);
   _wire.endTransmission();
 
-  _wire.requestFrom(ADDRESS, uint8_t(7));
+  _wire.requestFrom(ADDRESS, uint8_t {7});
   timeptr->tm_sec = bcd2bin(_wire.read() & 0x7f);
   timeptr->tm_min = bcd2bin(_wire.read());
   timeptr->tm_hour = bcd2bin(_wire.read());
@@ -338,7 +347,7 @@ void DS1307::getTime(tm *timeptr) {
   timeptr->tm_mon = bcd2bin(_wire.read()) - 1;
   timeptr->tm_year = bcd2bin(_wire.read()) + 100;
 
-  if (timeptr->tm_wday == 7) {
+  if (unlikely(timeptr->tm_wday == 7)) {
     // Sunday
     timeptr->tm_wday = 0;
   }
@@ -346,7 +355,7 @@ void DS1307::getTime(tm *timeptr) {
 
 void DS1307::setTime(const tm *timeptr) {
   uint8_t wday = timeptr->tm_wday;
-  if (wday == 0) {
+  if (unlikely(wday == 0)) {
     // Sunday
     wday = 7;
   }
@@ -376,10 +385,10 @@ DS1307::SqWaveFreq DS1307::getSQWOut() {
 
   if (r & 0x10) {
     // SQWE set
-    return static_cast<SqWaveFreq>(r & 0x7f);
+    return static_cast<SqWaveFreq>(r & 0x13);
   }
 
-  return static_cast<SqWaveFreq>(r & 0xfc);
+  return static_cast<SqWaveFreq>(r & 0x80);
 }
 
 void DS1307::setSQWOut(SqWaveFreq value) {
@@ -406,7 +415,7 @@ void DS3231::getTime(tm *timeptr) {
   _wire.write(DS3231_SEC);
   _wire.endTransmission();
 
-  _wire.requestFrom(ADDRESS, uint8_t(7));
+  _wire.requestFrom(ADDRESS, uint8_t {7});
   timeptr->tm_sec = bcd2bin(_wire.read() & 0x7f);
   timeptr->tm_min = bcd2bin(_wire.read());
   timeptr->tm_hour = bcd2bin(_wire.read());
@@ -416,20 +425,20 @@ void DS3231::getTime(tm *timeptr) {
   timeptr->tm_mon = bcd2bin(cen_mon & 0x1f) - 1;
   timeptr->tm_year = bcd2bin(_wire.read()) + 100;
 
-  if (cen_mon & 0x80) {
-    // century bit set
-    timeptr->tm_year += 100;
-  }
-
-  if (timeptr->tm_wday == 7) {
+  if (unlikely(timeptr->tm_wday == 7)) {
     // Sunday
     timeptr->tm_wday = 0;
+  }
+
+  if (unlikely(cen_mon & 0x80)) {
+    // century bit set
+    timeptr->tm_year += 100;
   }
 }
 
 void DS3231::setTime(const tm *timeptr) {
   uint8_t wday = timeptr->tm_wday;
-  if (wday == 0) {
+  if (unlikely(wday == 0)) {
     // Sunday
     wday = 7;
   }
@@ -459,7 +468,7 @@ bool DS3231::isRunning() {
 }
 
 void DS3231::setRunning(bool running) {
-  MASK_BOOL_REG_BITS(DS3231_SEC, 0x80, !running);
+  MASK_BOOL_REG_BITS(DS3231_CTRL, 0x80, !running);
 }
 
 bool DS3231::getINTCN() {
@@ -532,7 +541,7 @@ DS3231::Alarm1Rate DS3231::getAL1(tm *timeptr) {
   _wire.write(DS3231_AL1_SEC);
   _wire.endTransmission();
 
-  _wire.requestFrom(ADDRESS, uint8_t(4));
+  _wire.requestFrom(ADDRESS, uint8_t {4});
   uint8_t sec = _wire.read();
   uint8_t min = _wire.read();
   uint8_t hr = _wire.read();
@@ -625,7 +634,7 @@ DS3231::Alarm2Rate DS3231::getAL2(tm *timeptr) {
   _wire.write(DS3231_AL2_MIN);
   _wire.endTransmission();
 
-  _wire.requestFrom(ADDRESS, uint8_t(3));
+  _wire.requestFrom(ADDRESS, uint8_t {3});
   uint8_t min = _wire.read();
   uint8_t hr = _wire.read();
   uint8_t date = _wire.read();
@@ -716,7 +725,7 @@ float DS3231::getTemperature() {
   _wire.write(DS3231_TEMP_MSB);
   _wire.endTransmission();
 
-  _wire.requestFrom(ADDRESS, uint8_t(2));
+  _wire.requestFrom(ADDRESS, uint8_t {2});
   uint8_t msb = _wire.read();
   uint8_t lsb = _wire.read();
 
@@ -733,7 +742,7 @@ bool RX8025T::setup() {
     return false;
   }
 
-  _wire.requestFrom(ADDRESS, uint8_t(1));
+  _wire.requestFrom(ADDRESS, uint8_t {1});
   uint8_t flag = _wire.read();
   _wire.endTransmission();
 
@@ -777,7 +786,7 @@ void RX8025T::getTime(tm *timeptr) {
   _wire.write(RX8025T_SEC);
   _wire.endTransmission();
 
-  _wire.requestFrom(ADDRESS, uint8_t(7));
+  _wire.requestFrom(ADDRESS, uint8_t {7});
   timeptr->tm_sec = bcd2bin(_wire.read() & 0x7f);
   timeptr->tm_min = bcd2bin(_wire.read() & 0x7f);
   timeptr->tm_hour = bcd2bin(_wire.read() & 0x3f);
@@ -910,7 +919,7 @@ uint16_t RX8025T::getTimer() {
   _wire.write(RX8025T_TIM0);
   _wire.endTransmission();
 
-  _wire.requestFrom(ADDRESS, uint8_t(2));
+  _wire.requestFrom(ADDRESS, uint8_t {2});
   uint16_t val = _wire.read();
   val |= _wire.read() << 8;
   return val;
@@ -929,7 +938,7 @@ void RX8025T::getAlarm(tm *timeptr) {
   _wire.write(RX8025T_AL_MIN);
   _wire.endTransmission();
 
-  _wire.requestFrom(ADDRESS, uint8_t(6));
+  _wire.requestFrom(ADDRESS, uint8_t {6});
   uint8_t min = _wire.read();
   uint8_t hour = _wire.read();
   uint8_t day = _wire.read();
@@ -1010,7 +1019,7 @@ bool PCF8563::setup() {
     return false;
   }
 
-  _wire.requestFrom(ADDRESS, uint8_t(1));
+  _wire.requestFrom(ADDRESS, uint8_t {1});
   uint8_t vl = _wire.read();
   _wire.endTransmission();
 
@@ -1048,7 +1057,7 @@ void PCF8563::getTime(tm *timeptr) {
   _wire.write(PCF8563_VL_SEC);
   _wire.endTransmission();
 
-  _wire.requestFrom(ADDRESS, uint8_t(7));
+  _wire.requestFrom(ADDRESS, uint8_t {7});
   timeptr->tm_sec = bcd2bin(_wire.read() & 0x7f);
   timeptr->tm_min = bcd2bin(_wire.read() & 0x7f);
   timeptr->tm_hour = bcd2bin(_wire.read() & 0x3f);
@@ -1161,7 +1170,7 @@ void PCF8563::getAlarm(tm *timeptr) {
   _wire.write(PCF8563_AL_MIN);
   _wire.endTransmission();
 
-  _wire.requestFrom(ADDRESS, uint8_t(4));
+  _wire.requestFrom(ADDRESS, uint8_t {4});
   uint8_t min = _wire.read();
   uint8_t hour = _wire.read();
   uint8_t day = _wire.read();
