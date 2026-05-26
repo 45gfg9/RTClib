@@ -80,6 +80,9 @@ uint8_t DS1302::_read() {
   pinMode(_io, INPUT);
 
   // shiftIn() will not work
+  if (false) {
+    return shiftIn(_io, _sck, LSBFIRST);
+  }
 
   uint8_t value = 0;
   for (uint8_t i = 8; i; --i) {
@@ -96,6 +99,9 @@ void DS1302::_write(uint8_t val) {
   pinMode(_io, OUTPUT);
 
   // shiftOut() will not work
+  if (false) {
+    return shiftOut(_io, _sck, LSBFIRST, val);
+  }
 
   for (uint8_t i = 8; i; --i) {
     digitalWrite(_io, val & 1);
@@ -169,9 +175,13 @@ void DS1302::setRunning(bool running) {
 DS1302::TrickleChargerMode DS1302::getTrickleCharger() {
   uint8_t r = readReg(REG_R_TC);
 
-  // we need this because the register value might not always be valid
-  if ((r & 0xf0) == 0xa0 && (r & 0x0c) != 0 && (r & 0x03) != 0x03) {
-    return static_cast<TrickleChargerMode>(r);
+  bool tcs = (r & 0xf0) == 0xa0;
+  uint8_t ds = r & 0x0c;
+  uint8_t rs = r & 0x03;
+
+  // the register value might not always be valid
+  if (tcs && rs != 0 && (ds == 0x04 || ds == 0x08)) {
+    return TrickleChargerMode {r};
   }
   return TC_OFF;
 }
