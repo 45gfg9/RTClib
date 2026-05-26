@@ -117,6 +117,33 @@ class DS1302 {
   void _write(uint8_t val);
 
 public:
+  enum RegAddr : uint8_t {
+    REG_W_SEC = 0x80,
+    REG_R_SEC = 0x81,
+    REG_W_MIN = 0x82,
+    REG_R_MIN = 0x83,
+    REG_W_HR = 0x84,
+    REG_R_HR = 0x85,
+    REG_W_DATE = 0x86,
+    REG_R_DATE = 0x87,
+    REG_W_MON = 0x88,
+    REG_R_MON = 0x89,
+    REG_W_DOW = 0x8a,
+    REG_R_DOW = 0x8b,
+    REG_W_YEAR = 0x8c,
+    REG_R_YEAR = 0x8d,
+    REG_W_WP = 0x8e,
+    REG_R_WP = 0x8f,
+    REG_W_TC = 0x90,
+    REG_R_TC = 0x91,
+    REG_W_CLKBURST = 0xbe,
+    REG_R_CLKBURST = 0xbf,
+    REG_W_RAM = 0xc0,
+    REG_R_RAM = 0xc1,
+    REG_W_RAMBURST = 0xfe,
+    REG_R_RAMBURST = 0xff,
+  };
+
   enum TrickleChargerMode : uint8_t {
     TC_OFF = 0x5c,  // off
     TC_1D2K = 0xa5, // 1 diode, 2K ohm
@@ -133,8 +160,8 @@ public:
 
   bool setup();
 
-  uint8_t readReg(uint8_t addr);
-  void writeReg(uint8_t addr, uint8_t val);
+  uint8_t readReg(RegAddr addr);
+  void writeReg(RegAddr addr, uint8_t val);
 
   uint8_t readRAM(uint8_t index);
   void writeRAM(uint8_t index, uint8_t val);
@@ -160,6 +187,18 @@ class DS1307 {
   TwoWire &_wire;
 
 public:
+  enum RegAddr : uint8_t {
+    REG_SEC = 0x00,
+    REG_MIN = 0x01,
+    REG_HR = 0x02,
+    REG_DOW = 0x03,
+    REG_DATE = 0x04,
+    REG_MON = 0x05,
+    REG_YEAR = 0x06,
+    REG_CTRL = 0x07,
+    REG_RAM = 0x08,
+  };
+
   enum SqWaveFreq : uint8_t {
     SO_LOW = 0x00,   // keep sqw pin low
     SO_1HZ = 0x10,   // 1 Hz square wave
@@ -176,8 +215,8 @@ public:
 
   bool setup();
 
-  uint8_t readReg(uint8_t addr);
-  void writeReg(uint8_t addr, uint8_t val);
+  uint8_t readReg(RegAddr addr);
+  void writeReg(RegAddr addr, uint8_t val);
 
   uint8_t readRAM(uint8_t index);
   void writeRAM(uint8_t index, uint8_t val);
@@ -200,6 +239,28 @@ class DS3231 {
   TwoWire &_wire;
 
 public:
+  enum RegAddr : uint8_t {
+    REG_SEC = 0x00,
+    REG_MIN = 0x01,
+    REG_HR = 0x02,
+    REG_DOW = 0x03,
+    REG_DATE = 0x04,
+    REG_MON = 0x05,
+    REG_YEAR = 0x06,
+    REG_AL1_SEC = 0x07,
+    REG_AL1_MIN = 0x08,
+    REG_AL1_HR = 0x09,
+    REG_AL1_DATE = 0x0a,
+    REG_AL2_MIN = 0x0b,
+    REG_AL2_HR = 0x0c,
+    REG_AL2_DATE = 0x0d,
+    REG_CTRL = 0x0e,
+    REG_STATUS = 0x0f,
+    REG_AGING = 0x10,
+    REG_TEMP_MSB = 0x11,
+    REG_TEMP_LSB = 0x12,
+  };
+
   enum SqWaveFreq : uint8_t {
     SQW_1HZ = 0x0,
     SQW_1024HZ = 0x08,
@@ -232,8 +293,8 @@ public:
 
   bool setup();
 
-  uint8_t readReg(uint8_t addr);
-  void writeReg(uint8_t addr, uint8_t val);
+  uint8_t readReg(RegAddr addr);
+  void writeReg(RegAddr addr, uint8_t val);
 
   void getTime(tm *timeptr);
   void setTime(const tm *timeptr);
@@ -286,6 +347,25 @@ class RX8025T {
   TwoWire &_wire;
 
 public:
+  enum RegAddr : uint8_t {
+    REG_SEC = 0x00,
+    REG_MIN = 0x01,
+    REG_HOUR = 0x02,
+    REG_WEEK = 0x03,
+    REG_DAT = 0x04,
+    REG_MONTH = 0x05,
+    REG_YEAR = 0x06,
+    REG_RAM = 0x07,
+    REG_AL_MIN = 0x08,
+    REG_AL_HOUR = 0x09,
+    REG_AL_WK_D = 0x0a,
+    REG_TIM0 = 0x0b,
+    REG_TIM1 = 0x0c,
+    REG_EXT = 0x0d,
+    REG_FLAG = 0x0e,
+    REG_CTRL = 0x0f,
+  };
+
   enum TempCompIntv : uint8_t {
     TC_0S5 = 0x00,
     TC_2S = 0x40,
@@ -325,8 +405,8 @@ public:
 
   bool setup();
 
-  uint8_t readReg(uint8_t addr);
-  void writeReg(uint8_t addr, uint8_t val);
+  uint8_t readReg(RegAddr addr);
+  void writeReg(RegAddr addr, uint8_t val);
 
   void getTime(tm *timeptr);
   void setTime(const tm *timeptr);
@@ -378,6 +458,25 @@ class PCF8563 {
   TwoWire &_wire;
 
 public:
+  enum RegAddr : uint8_t {
+    REG_CTRL_1 = 0x00,
+    REG_CTRL_2 = 0x01,
+    REG_VL_SEC = 0x02,
+    REG_MIN = 0x03,
+    REG_HOUR = 0x04,
+    REG_DAY = 0x05,
+    REG_WEEK = 0x06,
+    REG_CEN_MON = 0x07,
+    REG_YEAR = 0x08,
+    REG_AL_MIN = 0x09,
+    REG_AL_HOUR = 0x0a,
+    REG_AL_DAY = 0x0b,
+    REG_AL_WEEK = 0x0c,
+    REG_CLKOUT = 0x0d,
+    REG_TIM_CTRL = 0x0e,
+    REG_TIM = 0x0f,
+  };
+
   enum CLKFreq : uint8_t {
     CLKOUT_OFF = 0x00,
     CLKOUT_32768HZ = 0x80,
@@ -400,8 +499,8 @@ public:
 
   bool setup();
 
-  uint8_t readReg(uint8_t addr);
-  void writeReg(uint8_t addr, uint8_t val);
+  uint8_t readReg(RegAddr addr);
+  void writeReg(RegAddr addr, uint8_t val);
 
   void getTime(tm *timeptr);
   void setTime(const tm *timeptr);
