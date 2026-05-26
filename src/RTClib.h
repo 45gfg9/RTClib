@@ -157,6 +157,8 @@ public:
   static constexpr uint8_t RAM_SIZE = 31;
 
   DS1302(uint8_t ce, uint8_t sck, uint8_t io);
+  DS1302(const DS1302 &) = delete;
+  DS1302 &operator=(const DS1302 &) = delete;
 
   bool setup();
 
@@ -177,7 +179,7 @@ public:
 
   RAMPtr begin() { return RAMPtr {this, 0}; }
   RAMPtr end() { return RAMPtr {this, RAM_SIZE}; }
-  RAMRef operator[](int index) { return RAMRef {this, index}; }
+  RAMRef operator[](uint8_t index) { return RAMRef {this, index}; }
 };
 
 class DS1307 {
@@ -212,6 +214,8 @@ public:
   static constexpr uint8_t RAM_SIZE = 56;
 
   explicit DS1307(TwoWire &wire = Wire);
+  DS1307(const DS1307 &) = delete;
+  DS1307 &operator=(const DS1307 &) = delete;
 
   bool setup();
 
@@ -232,7 +236,7 @@ public:
 
   RAMPtr begin() { return RAMPtr {this, 0}; }
   RAMPtr end() { return RAMPtr {this, RAM_SIZE}; }
-  RAMRef operator[](int index) { return RAMRef {this, index}; }
+  RAMRef operator[](uint8_t index) { return RAMRef {this, index}; }
 };
 
 class DS3231 {
@@ -290,6 +294,8 @@ public:
   static constexpr uint8_t ADDRESS = 0x68;
 
   explicit DS3231(TwoWire &wire = Wire);
+  DS3231(const DS3231 &) = delete;
+  DS3231 &operator=(const DS3231 &) = delete;
 
   bool setup();
 
@@ -402,6 +408,8 @@ public:
   static constexpr uint8_t RAM_SIZE = 1;
 
   explicit RX8025T(TwoWire &wire = Wire);
+  RX8025T(const RX8025T &) = delete;
+  RX8025T &operator=(const RX8025T &) = delete;
 
   bool setup();
 
@@ -451,7 +459,7 @@ public:
 
   RAMPtr begin() { return RAMPtr {this, 0}; }
   RAMPtr end() { return RAMPtr {this, RAM_SIZE}; }
-  RAMRef operator[](int index) { return RAMRef {this, index}; }
+  RAMRef operator[](uint8_t index) { return RAMRef {this, index}; }
 };
 
 class PCF8563 {
@@ -496,6 +504,8 @@ public:
   static constexpr uint8_t ADDRESS = 0x51;
 
   explicit PCF8563(TwoWire &wire = Wire);
+  PCF8563(const PCF8563 &) = delete;
+  PCF8563 &operator=(const PCF8563 &) = delete;
 
   bool setup();
 
