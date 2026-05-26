@@ -442,24 +442,26 @@ DS3231::Alarm1Rate DS3231::getAL1(tm *timeptr) {
   uint8_t hr = _wire.read();
   uint8_t date = _wire.read();
 
-  timeptr->tm_sec = bcd2bin(sec & 0x7f);
-  timeptr->tm_min = bcd2bin(min & 0x7f);
-  timeptr->tm_hour = bcd2bin(hr & 0x3f);
-
   bool dy_dt = date & 0x40;
 
-  if (dy_dt) {
-    // DY/#DT bit set, match day of week
-    timeptr->tm_wday = date & 0x07;
-    if (timeptr->tm_wday == 7) {
-      // Sunday
+  if (timeptr) {
+    timeptr->tm_sec = bcd2bin(sec & 0x7f);
+    timeptr->tm_min = bcd2bin(min & 0x7f);
+    timeptr->tm_hour = bcd2bin(hr & 0x3f);
+
+    if (dy_dt) {
+      // DY/#DT bit set, match day of week
+      timeptr->tm_wday = date & 0x07;
+      if (unlikely(timeptr->tm_wday == 7)) {
+        // Sunday
+        timeptr->tm_wday = 0;
+      }
+      timeptr->tm_mday = 0;
+    } else {
+      // DY/#DT bit clear, match date
+      timeptr->tm_mday = bcd2bin(date & 0x3f);
       timeptr->tm_wday = 0;
     }
-    timeptr->tm_mday = 0;
-  } else {
-    // DY/#DT bit clear, match date
-    timeptr->tm_mday = bcd2bin(date & 0x3f);
-    timeptr->tm_wday = 0;
   }
 
   bool a1m4 = date & 0x80;
@@ -534,23 +536,25 @@ DS3231::Alarm2Rate DS3231::getAL2(tm *timeptr) {
   uint8_t hr = _wire.read();
   uint8_t date = _wire.read();
 
-  timeptr->tm_min = bcd2bin(min & 0x7f);
-  timeptr->tm_hour = bcd2bin(hr & 0x3f);
-
   bool dy_dt = date & 0x40;
 
-  if (dy_dt) {
-    // DY/#DT bit set, match day of week
-    timeptr->tm_wday = date & 0x07;
-    if (timeptr->tm_wday == 7) {
-      // Sunday
+  if (timeptr) {
+    timeptr->tm_min = bcd2bin(min & 0x7f);
+    timeptr->tm_hour = bcd2bin(hr & 0x3f);
+
+    if (dy_dt) {
+      // DY/#DT bit set, match day of week
+      timeptr->tm_wday = date & 0x07;
+      if (unlikely(timeptr->tm_wday == 7)) {
+        // Sunday
+        timeptr->tm_wday = 0;
+      }
+      timeptr->tm_mday = 0;
+    } else {
+      // DY/#DT bit clear, match date
+      timeptr->tm_mday = bcd2bin(date & 0x3f);
       timeptr->tm_wday = 0;
     }
-    timeptr->tm_mday = 0;
-  } else {
-    // DY/#DT bit clear, match date
-    timeptr->tm_mday = bcd2bin(date & 0x3f);
-    timeptr->tm_wday = 0;
   }
 
   bool a2m4 = date & 0x80;
