@@ -270,15 +270,19 @@ void DS1307::setTime(const tm *timeptr) {
     wday = 7;
   }
 
+  const uint8_t write_buf[] {
+      REG_SEC,
+      bin2bcd(timeptr->tm_sec),
+      bin2bcd(timeptr->tm_min),
+      bin2bcd(timeptr->tm_hour),
+      wday,
+      bin2bcd(timeptr->tm_mday),
+      bin2bcd(timeptr->tm_mon + 1),
+      bin2bcd(timeptr->tm_year - 100),
+  };
+
   _wire.beginTransmission(ADDRESS);
-  _wire.write(REG_SEC);
-  _wire.write(bin2bcd(timeptr->tm_sec));
-  _wire.write(bin2bcd(timeptr->tm_min));
-  _wire.write(bin2bcd(timeptr->tm_hour));
-  _wire.write(wday);
-  _wire.write(bin2bcd(timeptr->tm_mday));
-  _wire.write(bin2bcd(timeptr->tm_mon + 1));
-  _wire.write(bin2bcd(timeptr->tm_year - 100));
+  _wire.write(write_buf, sizeof(write_buf));
   _wire.endTransmission();
 }
 
@@ -355,15 +359,19 @@ void DS3231::setTime(const tm *timeptr) {
     year -= 100;
   }
 
+  const uint8_t write_buf[] {
+      REG_SEC,
+      bin2bcd(timeptr->tm_sec),
+      bin2bcd(timeptr->tm_min),
+      bin2bcd(timeptr->tm_hour),
+      wday,
+      bin2bcd(timeptr->tm_mday),
+      cen_mon,
+      bin2bcd(year),
+  };
+
   _wire.beginTransmission(ADDRESS);
-  _wire.write(REG_SEC);
-  _wire.write(bin2bcd(timeptr->tm_sec));
-  _wire.write(bin2bcd(timeptr->tm_min));
-  _wire.write(bin2bcd(timeptr->tm_hour));
-  _wire.write(wday);
-  _wire.write(bin2bcd(timeptr->tm_mday));
-  _wire.write(cen_mon);
-  _wire.write(bin2bcd(year));
+  _wire.write(write_buf, sizeof(write_buf));
   _wire.endTransmission();
 }
 
@@ -509,12 +517,16 @@ void DS3231::setAL1(Alarm1Rate rate, const tm *timeptr) {
       break;
   }
 
+  const uint8_t write_buf[] {
+      REG_AL1_SEC,
+      sec,
+      min,
+      hr,
+      date,
+  };
+
   _wire.beginTransmission(ADDRESS);
-  _wire.write(REG_AL1_SEC);
-  _wire.write(sec);
-  _wire.write(min);
-  _wire.write(hr);
-  _wire.write(date);
+  _wire.write(write_buf, sizeof(write_buf));
   _wire.endTransmission();
 }
 
@@ -594,11 +606,15 @@ void DS3231::setAL2(Alarm2Rate rate, const tm *timeptr) {
       break;
   }
 
+  const uint8_t write_buf[] {
+      REG_AL2_MIN,
+      min,
+      hr,
+      date,
+  };
+
   _wire.beginTransmission(ADDRESS);
-  _wire.write(REG_AL2_MIN);
-  _wire.write(min);
-  _wire.write(hr);
-  _wire.write(date);
+  _wire.write(write_buf, sizeof(write_buf));
   _wire.endTransmission();
 }
 
@@ -638,25 +654,31 @@ bool RX8025T::setup() {
 
   // check VLF
   if (flag & 0x02) {
+    static constexpr uint8_t PROGMEM init_regs[] {
+        REG_SEC,
+        0x00, // SEC
+        0x00, // MIN
+        0x00, // HOUR
+        0x40, // WEEK
+        0x01, // DAY
+        0x01, // MONTH
+        0x00, // YEAR
+        0x00, // RAM
+        0x00, // AL_MIN
+        0x00, // AL_HOUR
+        0x00, // AL_WK_D
+        0x00, // TIM0
+        0x00, // TIM1
+        0x00, // EXT
+        0x00, // FLAG
+        0x40, // CTRL
+    };
+
     // reinit all
     _wire.beginTransmission(ADDRESS);
-    _wire.write(REG_SEC);
-    _wire.write(0x00); // SEC
-    _wire.write(0x00); // MIN
-    _wire.write(0x00); // HOUR
-    _wire.write(0x40); // WEEK
-    _wire.write(0x01); // DAY
-    _wire.write(0x01); // MONTH
-    _wire.write(0x00); // YEAR
-    _wire.write(0x00); // RAM
-    _wire.write(0x00); // AL_MIN
-    _wire.write(0x00); // AL_HOUR
-    _wire.write(0x00); // AL_WK_D
-    _wire.write(0x00); // TIM0
-    _wire.write(0x00); // TIM1
-    _wire.write(0x00); // EXT
-    _wire.write(0x00); // FLAG
-    _wire.write(0x40); // CTRL
+    for (uint8_t i = 0; i < sizeof(init_regs); ++i) {
+      _wire.write(pgm_read_byte(init_regs + i));
+    }
     _wire.endTransmission();
   }
 
@@ -687,15 +709,19 @@ void RX8025T::getTime(tm *timeptr) {
 }
 
 void RX8025T::setTime(const tm *t) {
+  const uint8_t write_buf[] {
+      REG_SEC,
+      bin2bcd(t->tm_sec),
+      bin2bcd(t->tm_min),
+      bin2bcd(t->tm_hour),
+      static_cast<uint8_t>(1U << t->tm_wday),
+      bin2bcd(t->tm_mday),
+      bin2bcd(t->tm_mon + 1),
+      bin2bcd(t->tm_year - 100),
+  };
+
   _wire.beginTransmission(ADDRESS);
-  _wire.write(REG_SEC);
-  _wire.write(bin2bcd(t->tm_sec));
-  _wire.write(bin2bcd(t->tm_min));
-  _wire.write(bin2bcd(t->tm_hour));
-  _wire.write(1U << t->tm_wday);
-  _wire.write(bin2bcd(t->tm_mday));
-  _wire.write(bin2bcd(t->tm_mon + 1));
-  _wire.write(bin2bcd(t->tm_year - 100));
+  _wire.write(write_buf, sizeof(write_buf));
   _wire.endTransmission();
 }
 
@@ -816,10 +842,14 @@ uint16_t RX8025T::getTimer() {
 }
 
 void RX8025T::setTimer(uint16_t val) {
+  const uint8_t write_buf[] {
+      REG_TIM0,
+      uint8_t(val & 0xff),
+      uint8_t(val >> 8),
+  };
+
   _wire.beginTransmission(ADDRESS);
-  _wire.write(REG_TIM0);
-  _wire.write(val & 0xff);
-  _wire.write(val >> 8);
+  _wire.write(write_buf, sizeof(write_buf));
   _wire.endTransmission();
 }
 
@@ -872,11 +902,15 @@ void RX8025T::setAlarm(const tm *timeptr) {
     day = wday & 0x7f;
   }
 
+  const uint8_t write_buf[] {
+      REG_AL_MIN,
+      min,
+      hour,
+      day,
+  };
+
   _wire.beginTransmission(ADDRESS);
-  _wire.write(REG_AL_MIN);
-  _wire.write(min);
-  _wire.write(hour);
-  _wire.write(day);
+  _wire.write(write_buf, sizeof(write_buf));
   _wire.endTransmission();
 
   if ((day & 0x80) == 0) {
@@ -913,22 +947,24 @@ bool PCF8563::setup() {
   uint8_t vl = _wire.read();
   _wire.endTransmission();
 
+  static constexpr uint8_t PROGMEM init_regs[] {
+      REG_CTRL_1,
+      0x00, // Control_status_1
+      0x00, // Control_status_2
+      0x00, // VL_seconds
+      0x00, // Minutes
+      0x00, // Hours
+      0x01, // Days
+      0x05, // Weekdays
+      0x01, // Century_months
+      0x00, // Years
+  };
+  const uint8_t bytes_to_write = (vl & 0x80) ? sizeof(init_regs) : 2;
+
   _wire.beginTransmission(ADDRESS);
-  _wire.write(REG_CTRL_1);
-  _wire.write(0x00); // Control_status_1
-
-  if (vl & 0x80) {
-    // VL bit is set
-    _wire.write(0x00); // Control_status_2
-    _wire.write(0x00); // VL_seconds
-    _wire.write(0x00); // Minutes
-    _wire.write(0x00); // Hours
-    _wire.write(0x01); // Days
-    _wire.write(0x05); // Weekdays
-    _wire.write(0x01); // Century_months
-    _wire.write(0x00); // Years
+  for (uint8_t i = 0; i < bytes_to_write; ++i) {
+    _wire.write(pgm_read_byte(init_regs + i));
   }
-
   _wire.endTransmission();
 
   return true;
@@ -973,15 +1009,19 @@ void PCF8563::setTime(const tm *timeptr) {
     year -= 100;
   }
 
+  const uint8_t write_buf[] {
+      REG_VL_SEC,
+      bin2bcd(timeptr->tm_sec),
+      bin2bcd(timeptr->tm_min),
+      bin2bcd(timeptr->tm_hour),
+      bin2bcd(timeptr->tm_mday),
+      bin2bcd(timeptr->tm_wday),
+      cen_mon,
+      bin2bcd(year),
+  };
+
   _wire.beginTransmission(ADDRESS);
-  _wire.write(REG_VL_SEC);
-  _wire.write(bin2bcd(timeptr->tm_sec));
-  _wire.write(bin2bcd(timeptr->tm_min));
-  _wire.write(bin2bcd(timeptr->tm_hour));
-  _wire.write(bin2bcd(timeptr->tm_mday));
-  _wire.write(bin2bcd(timeptr->tm_wday));
-  _wire.write(cen_mon);
-  _wire.write(bin2bcd(year));
+  _wire.write(write_buf, sizeof(write_buf));
   _wire.endTransmission();
 }
 
@@ -1066,12 +1106,16 @@ void PCF8563::setAlarm(const tm *timeptr) {
   uint8_t day = (timeptr->tm_mday == -1) ? 0x80 : bin2bcd(timeptr->tm_mday);
   uint8_t wday = (timeptr->tm_wday == -1) ? 0x80 : timeptr->tm_wday;
 
+  const uint8_t write_buf[] {
+      REG_AL_MIN,
+      min,
+      hour,
+      day,
+      wday,
+  };
+
   _wire.beginTransmission(ADDRESS);
-  _wire.write(REG_AL_MIN);
-  _wire.write(min);
-  _wire.write(hour);
-  _wire.write(day);
-  _wire.write(wday);
+  _wire.write(write_buf, sizeof(write_buf));
   _wire.endTransmission();
 }
 
