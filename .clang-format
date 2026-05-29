@@ -1,0 +1,11 @@
+# Language: Cpp
+BinPackArguments: false
+BinPackParameters: false
+SpaceBeforeCpp11BracedList: true
+NamespaceIndentation: All
+AlignEscapedNewlines: Left
+AllowShortBlocksOnASingleLine: Empty
+AllowShortFunctionsOnASingleLine: Inline
+ColumnLimit: 120
+IndentCaseLabels: true
+IndentGotoLabels: false

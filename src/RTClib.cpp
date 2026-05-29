@@ -450,11 +450,9 @@ DS3231::Alarm1Rate DS3231::getAL1(tm *timeptr) {
         // Sunday
         timeptr->tm_wday = 0;
       }
-      timeptr->tm_mday = 0;
     } else {
       // DY/#DT bit clear, match date
       timeptr->tm_mday = bcd2bin(date & 0x3f);
-      timeptr->tm_wday = 0;
     }
   }
 
@@ -543,11 +541,9 @@ DS3231::Alarm2Rate DS3231::getAL2(tm *timeptr) {
         // Sunday
         timeptr->tm_wday = 0;
       }
-      timeptr->tm_mday = 0;
     } else {
       // DY/#DT bit clear, match date
       timeptr->tm_mday = bcd2bin(date & 0x3f);
-      timeptr->tm_wday = 0;
     }
   }
 
@@ -593,6 +589,7 @@ void DS3231::setAL2(Alarm2Rate rate, const tm *timeptr) {
     default:
       break;
     case AL2_MATCH_DAY:
+      // FIXME: wday not respected, same for AL1
       date |= 0x40;
       break;
   }
@@ -998,13 +995,7 @@ void PCF8563::setRunning(bool running) {
 
 PCF8563::CLKFreq PCF8563::getCLKOut() {
   uint8_t clkout = readReg(REG_CLKOUT);
-
-  if ((clkout & 0x80) == 0) {
-    // FE bit is 0
-    return CLKOUT_OFF;
-  } else {
-    return static_cast<CLKFreq>(clkout & 0x07);
-  }
+  return (clkout & 0x80) ? static_cast<CLKFreq>(clkout & 0x07) : CLKOUT_OFF;
 }
 
 void PCF8563::setCLKOut(CLKFreq freq) {
@@ -1021,13 +1012,7 @@ void PCF8563::setTimer(uint8_t val) {
 
 PCF8563::TimerFreq PCF8563::getTimerFreq() {
   uint8_t tim_ctrl = readReg(REG_TIM_CTRL);
-
-  if ((tim_ctrl & 0x80) == 0) {
-    // TE bit is 0
-    return TF_OFF;
-  } else {
-    return static_cast<TimerFreq>(tim_ctrl);
-  }
+  return (tim_ctrl & 0x80) ? TimerFreq {tim_ctrl} : TF_OFF;
 }
 
 void PCF8563::setTimerFreq(TimerFreq freq) {
