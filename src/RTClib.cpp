@@ -888,7 +888,7 @@ void RX8025T::setAlarm(const tm *timeptr) {
     wada = true;
   } else {
     // sets WEEK as target of alarm function
-    day = wday;
+    day = wday & 0x7f;
   }
 
   _wire.beginTransmission(ADDRESS);
