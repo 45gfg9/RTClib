@@ -292,7 +292,6 @@ void DS1307::setRunning(bool running) {
 
 DS1307::SqWaveFreq DS1307::getSQWOut() {
   uint8_t r = readReg(REG_CTRL);
-
   return static_cast<SqWaveFreq>((r & 0x10) ? (r & 0x13) : (r & 0x80));
 }
 
@@ -376,14 +375,6 @@ void DS3231::setRunning(bool running) {
   MASK_BOOL_REG_BITS(REG_CTRL, 0x80, !running);
 }
 
-bool DS3231::getINTCN() {
-  return (readReg(REG_CTRL) & 0x04) != 0;
-}
-
-void DS3231::setINTCN(bool intcn) {
-  MASK_BOOL_REG_BITS(REG_CTRL, 0x04, intcn);
-}
-
 bool DS3231::getBBSQW() {
   return (readReg(REG_CTRL) & 0x40) != 0;
 }
@@ -392,21 +383,14 @@ void DS3231::setBBSQW(bool bbsqw) {
   MASK_BOOL_REG_BITS(REG_CTRL, 0x40, bbsqw);
 }
 
-DS3231::SqWaveFreq DS3231::getSQWFreq() {
-  return static_cast<SqWaveFreq>(readReg(REG_CTRL) & 0x18);
-}
-
-void DS3231::setSQWFreq(SqWaveFreq freq) {
+DS3231::IntSqwFreq DS3231::getIntSqw() {
   uint8_t ctrl = readReg(REG_CTRL);
-  writeReg(REG_CTRL, (ctrl & ~0x18) | freq);
+  return (ctrl & 0x04) ? INT_EN : static_cast<IntSqwFreq>(ctrl & 0x18);
 }
 
-bool DS3231::isIntrEnabled() {
-  return (readReg(REG_CTRL) & 0x04) != 0;
-}
-
-void DS3231::setIntrEnabled(bool enabled) {
-  MASK_BOOL_REG_BITS(REG_CTRL, 0x04, enabled);
+void DS3231::setIntSqw(IntSqwFreq freq) {
+  uint8_t ctrl = readReg(REG_CTRL);
+  writeReg(REG_CTRL, (ctrl & ~0x1c) | freq);
 }
 
 bool DS3231::isAL1IntrEnabled() {

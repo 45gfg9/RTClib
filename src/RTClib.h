@@ -265,8 +265,9 @@ public:
     REG_TEMP_LSB = 0x12,
   };
 
-  enum SqWaveFreq : uint8_t {
-    SQW_1HZ = 0x0,
+  enum IntSqwFreq : uint8_t {
+    INT_EN = 0x04,
+    SQW_1HZ = 0x00,
     SQW_1024HZ = 0x08,
     SQW_4096HZ = 0x10,
     SQW_8192HZ = 0x18,
@@ -308,17 +309,11 @@ public:
   bool isRunning();
   void setRunning(bool running);
 
-  bool getINTCN();
-  void setINTCN(bool intcn);
-
   bool getBBSQW();
   void setBBSQW(bool bbsqw);
 
-  SqWaveFreq getSQWFreq();
-  void setSQWFreq(SqWaveFreq freq);
-
-  bool isIntrEnabled();
-  void setIntrEnabled(bool enabled);
+  IntSqwFreq getIntSqw();
+  void setIntSqw(IntSqwFreq freq);
 
   Alarm1Rate getAL1(tm *timeptr);
   void setAL1(Alarm1Rate rate, const tm *timeptr);
