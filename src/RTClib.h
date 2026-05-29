@@ -103,7 +103,7 @@ namespace __rtclib_details {
       return *this;
     }
   };
-}; // namespace __rtclib_details
+} // namespace __rtclib_details
 
 class DS1302 {
   using RAMRef = __rtclib_details::RAMRef<DS1302>;
@@ -342,8 +342,8 @@ class RX8025T {
   using RAMPtr = __rtclib_details::RAMPtr<RX8025T>;
 
   friend class __rtclib_details::RAMRef<RX8025T>;
-  uint8_t readRAM(uint8_t index) { return getRAM(); }
-  void writeRAM(uint8_t index, uint8_t val) { setRAM(val); }
+  uint8_t readRAM(uint8_t) { return getRAM(); }
+  void writeRAM(uint8_t, uint8_t val) { setRAM(val); }
 
   TwoWire &_wire;
 

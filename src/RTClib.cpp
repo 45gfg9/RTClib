@@ -886,13 +886,13 @@ void RX8025T::getAlarm(tm *timeptr) {
 void RX8025T::setAlarm(const tm *timeptr) {
   uint8_t min = (timeptr->tm_min == -1) ? 0x80 : bin2bcd(timeptr->tm_min);
   uint8_t hour = (timeptr->tm_hour == -1) ? 0x80 : bin2bcd(timeptr->tm_hour);
-  uint8_t day = timeptr->tm_mday;
-  uint8_t wday = timeptr->tm_wday;
+  int8_t day = timeptr->tm_mday;
+  int8_t wday = timeptr->tm_wday;
   bool wada = false;
 
   if ((day == -1 && wday == -1) || (day != -1 && wday != -1)) {
     // does not match DAY/WEEK
-    day = 0x80;
+    day = static_cast<int8_t>(0x80);
   } else if (day != -1) {
     // sets DAY as target of alarm function
     day = bin2bcd(day & 0x3f);
@@ -906,7 +906,7 @@ void RX8025T::setAlarm(const tm *timeptr) {
       REG_AL_MIN,
       min,
       hour,
-      day,
+      static_cast<uint8_t>(day),
   };
 
   _wire.beginTransmission(ADDRESS);

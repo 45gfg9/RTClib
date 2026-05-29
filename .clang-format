@@ -9,3 +9,5 @@ AllowShortFunctionsOnASingleLine: Inline
 ColumnLimit: 120
 IndentCaseLabels: true
 IndentGotoLabels: false
+AlwaysBreakTemplateDeclarations: Yes
+SortIncludes: false
