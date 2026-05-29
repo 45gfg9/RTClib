@@ -368,7 +368,7 @@ public:
   };
 
   enum TempCompIntv : uint8_t {
-    TC_0S5 = 0x00,
+    TC_0_5S = 0x00,
     TC_2S = 0x40,
     TC_10S = 0x80,
     TC_30S = 0xc0,
