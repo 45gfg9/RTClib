@@ -478,9 +478,9 @@ DS3231::Alarm1Rate DS3231::getAL1(tm *timeptr) {
   } else if (a1m4 && !a1m3 && !a1m2 && !a1m1) {
     return AL1_MATCH_HOURS;
   } else if (!a1m4 && !a1m3 && !a1m2 && !a1m1 && !dy_dt) {
-    return AL1_MATCH_DATE;
+    return AL1_MATCH_MDAY;
   } else if (!a1m4 && !a1m3 && !a1m2 && !a1m1 && dy_dt) {
-    return AL1_MATCH_DAY;
+    return AL1_MATCH_WDAY;
   } else {
     return AL1_INVALID;
   }
@@ -512,7 +512,7 @@ void DS3231::setAL1(Alarm1Rate rate, const tm *timeptr) {
       [[fallthrough]];
     default:
       break;
-    case AL1_MATCH_DAY:
+    case AL1_MATCH_WDAY:
       date |= 0x40;
       break;
   }
@@ -570,9 +570,9 @@ DS3231::Alarm2Rate DS3231::getAL2(tm *timeptr) {
   } else if (a2m4 && !a2m3 && !a2m2) {
     return AL2_MATCH_HOURS;
   } else if (!a2m4 && !a2m3 && !a2m2 && !dy_dt) {
-    return AL2_MATCH_DATE;
+    return AL2_MATCH_MDAY;
   } else if (!a2m4 && !a2m3 && !a2m2 && dy_dt) {
-    return AL2_MATCH_DAY;
+    return AL2_MATCH_WDAY;
   } else {
     return AL2_INVALID;
   }
@@ -600,7 +600,7 @@ void DS3231::setAL2(Alarm2Rate rate, const tm *timeptr) {
       [[fallthrough]];
     default:
       break;
-    case AL2_MATCH_DAY:
+    case AL2_MATCH_WDAY:
       // FIXME: wday not respected, same for AL1
       date |= 0x40;
       break;
